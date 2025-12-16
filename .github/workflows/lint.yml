@@ -1,0 +1,50 @@
+name: Reusable Collie Lint Workflow
+on:
+  workflow_call:
+    inputs:
+      files:
+        description: 'Grammar files to lint (glob pattern)'
+        required: false
+        default: '**/*.y'
+        type: string
+      config:
+        description: 'Path to .collie.yml config file'
+        required: false
+        default: '.collie.yml'
+        type: string
+      ruby-version:
+        description: 'Ruby version to use'
+        required: false
+        default: '3.4'
+        type: string
+      fail-on-warnings:
+        description: 'Fail the workflow if warnings are found'
+        required: false
+        default: false
+        type: boolean
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Ruby
+      uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: ${{ inputs.ruby-version }}
+    - name: Install Collie
+      run: gem install collie
+    - name: Run Collie lint
+      run: |
+        if [ -f "${{ inputs.config }}" ]; then
+          collie lint --config ${{ inputs.config }} ${{ inputs.files }}
+        else
+          collie lint ${{ inputs.files }}
+        fi
+    - name: Check for warnings
+      if: inputs.fail-on-warnings
+      run: |
+        OUTPUT=$(collie lint ${{ inputs.files }} 2>&1)
+        if echo "$OUTPUT" | grep -q "warning"; then
+          echo "Warnings found in grammar files"
+          exit 1
+        fi

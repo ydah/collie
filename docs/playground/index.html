@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Collie Playground - Interactive Grammar Linter</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs/editor/editor.main.css">
+</head>
+<body>
+  <div id="app">
+    <!-- Header -->
+    <header class="header">
+      <div class="container">
+        <h1>Collie Playground</h1>
+        <p>Interactive linter and formatter for Lrama Style BNF grammar files</p>
+        <div class="header-actions">
+          <a href="https://github.com/ydah/collie" target="_blank" class="btn btn-secondary">
+            GitHub
+          </a>
+          <a href="../TUTORIAL.html" class="btn btn-secondary">
+            Tutorial
+          </a>
+        </div>
+      </div>
+    </header>
+
+    <!-- Loading Screen -->
+    <div id="loading" class="loading">
+      <div class="loading-content">
+        <div class="spinner"></div>
+        <p>Loading Ruby.wasm and Collie...</p>
+        <p class="loading-detail">First load may take a moment</p>
+      </div>
+    </div>
+
+    <!-- Main Content -->
+    <div id="main-content" class="main-content" style="display: none;">
+      <div class="container">
+        <!-- Toolbar -->
+        <div class="toolbar">
+          <div class="toolbar-left">
+            <select id="example-select" class="select">
+              <option value="">Load Example...</option>
+              <option value="simple">Simple Calculator</option>
+              <option value="lrama">Lrama Features</option>
+              <option value="invalid">Invalid Grammar (Demo)</option>
+            </select>
+          </div>
+          <div class="toolbar-right">
+            <button id="lint-btn" class="btn btn-primary">
+              Lint
+            </button>
+            <button id="format-btn" class="btn btn-primary">
+              Format
+            </button>
+            <button id="fix-btn" class="btn btn-success">
+              Fix All
+            </button>
+            <button id="clear-btn" class="btn btn-secondary">
+              Clear
+            </button>
+          </div>
+        </div>
+
+        <!-- Editor and Output -->
+        <div class="workspace">
+          <!-- Editor Panel -->
+          <div class="panel panel-editor">
+            <div class="panel-header">
+              <h2>Grammar File</h2>
+              <span class="panel-info">calc.y</span>
+            </div>
+            <div id="editor" class="editor-container"></div>
+          </div>
+
+          <!-- Output Panel -->
+          <div class="panel panel-output">
+            <div class="panel-header">
+              <h2>Output</h2>
+              <div class="output-tabs">
+                <button class="tab-btn active" data-tab="diagnostics">
+                  Diagnostics
+                </button>
+                <button class="tab-btn" data-tab="formatted">
+                  Formatted
+                </button>
+                <button class="tab-btn" data-tab="rules">
+                  Rules
+                </button>
+              </div>
+            </div>
+
+            <!-- Diagnostics Tab -->
+            <div id="tab-diagnostics" class="tab-content active">
+              <div id="diagnostics-output" class="output-content">
+                <div class="placeholder">
+                  Click "Lint" to check for issues
+                </div>
+              </div>
+            </div>
+
+            <!-- Formatted Tab -->
+            <div id="tab-formatted" class="tab-content">
+              <pre id="formatted-output" class="output-content"><div class="placeholder">Click "Format" to see formatted output</div></pre>
+            </div>
+
+            <!-- Rules Tab -->
+            <div id="tab-rules" class="tab-content">
+              <div id="rules-output" class="output-content">
+                <div class="placeholder">
+                  Loading rules...
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Footer Info -->
+        <div class="info-panel">
+          <h3>About Collie</h3>
+          <p>
+            Collie is a linter and formatter for Lrama Style BNF grammar files.
+            It provides 18+ built-in lint rules to catch errors, enforce conventions,
+            and suggest optimizations.
+          </p>
+          <p>
+            This playground runs completely in your browser using
+            <a href="https://github.com/ruby/ruby.wasm" target="_blank">Ruby.wasm</a>.
+            Your code never leaves your browser.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/@ruby/3.3-wasm-wasi@2.6.2/dist/browser.script.iife.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs/loader.min.js"></script>
+  <script src="js/examples.js?v=3"></script>
+  <script src="js/ruby-runner.js?v=3"></script>
+  <script src="js/collie-bridge.js?v=3"></script>
+  <script src="js/editor.js?v=3"></script>
+  <script src="js/app.js?v=3"></script>
+</body>
+</html>
