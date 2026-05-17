@@ -25,7 +25,7 @@ module Collie
       KEYWORDS = %w[
         %token %type %left %right %nonassoc %prec %union %start
         %rule %inline %code %expect %define %param %parse-param
-        %lex-param %initial-action %destructor %printer
+        %lex-param %initial-action %destructor %printer %empty
       ].freeze
 
       def initialize(source, filename: "<input>")
@@ -35,6 +35,7 @@ module Collie
         @line = 1
         @column = 1
         @tokens = []
+        @section_separator_count = 0
       end
 
       def tokenize
@@ -52,8 +53,12 @@ module Collie
             advance(2)
             @tokens << make_token(:PROLOGUE_END, "%}")
           elsif current_char == "%" && peek_char == "%"
-            advance(2)
-            @tokens << make_token(:SECTION_SEPARATOR, "%%")
+            @tokens << tokenize_section_separator
+            if @section_separator_count == 2
+              epilogue = tokenize_epilogue
+              @tokens << epilogue if epilogue
+              break
+            end
           elsif current_char == "%" && alpha?(peek_char)
             @tokens << tokenize_directive
           elsif current_char == "{"
@@ -191,12 +196,66 @@ module Collie
                when "%start" then :START
                when "%rule" then :RULE
                when "%inline" then :INLINE
-               else :DIRECTIVE
+               when "%empty" then :EMPTY
+               else
+                 return tokenize_unknown_declaration(start_line, start_column, buffer)
                end
 
         Token.new(
           type: type,
           value: buffer,
+          location: make_location(start_line, start_column, buffer.length)
+        )
+      end
+
+      def tokenize_section_separator
+        start_line = @line
+        start_column = @column
+        advance(2)
+        @section_separator_count += 1
+
+        Token.new(
+          type: :SECTION_SEPARATOR,
+          value: "%%",
+          location: make_location(start_line, start_column, 2)
+        )
+      end
+
+      def tokenize_epilogue
+        consume_single_line_break
+        return nil if eof?
+
+        start_line = @line
+        start_column = @column
+        buffer = @source[@pos..]
+        advance(buffer.length)
+
+        Token.new(
+          type: :EPILOGUE,
+          value: buffer,
+          location: make_location(start_line, start_column, buffer.length)
+        )
+      end
+
+      def consume_single_line_break
+        if current_char == "\r" && peek_char == "\n"
+          advance(2)
+        elsif current_char == "\n"
+          advance
+        end
+      end
+
+      def tokenize_unknown_declaration(start_line, start_column, directive)
+        buffer = +directive
+
+        until eof? || current_char == "\n"
+          buffer << current_char
+          advance
+        end
+
+        Token.new(
+          type: :UNKNOWN_DECLARATION,
+          value: buffer.rstrip,
           location: make_location(start_line, start_column, buffer.length)
         )
       end

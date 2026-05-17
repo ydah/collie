@@ -84,6 +84,16 @@ module Collie
       end
     end
 
+    # Declaration node for directives Collie does not understand yet.
+    class UnknownDeclaration
+      attr_accessor :source, :location
+
+      def initialize(source:, location: nil)
+        @source = source
+        @location = location
+      end
+    end
+
     # Grammar rule node
     class Rule
       attr_accessor :name, :alternatives, :location
@@ -97,12 +107,13 @@ module Collie
 
     # Alternative production for a rule
     class Alternative
-      attr_accessor :symbols, :action, :prec, :location
+      attr_accessor :symbols, :action, :prec, :explicit_empty, :location
 
-      def initialize(symbols: [], action: nil, prec: nil, location: nil)
+      def initialize(symbols: [], action: nil, prec: nil, explicit_empty: false, location: nil)
         @symbols = symbols
         @action = action
         @prec = prec
+        @explicit_empty = explicit_empty
         @location = location
       end
     end

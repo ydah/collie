@@ -128,6 +128,36 @@ RSpec.describe Collie::Formatter::Formatter do
       expect(output).to include("%inline opt(X): | X ;")
     end
 
+    it "keeps unknown declarations" do
+      source = <<~GRAMMAR
+        %define api.value.type {variant}
+        %%
+        %%
+      GRAMMAR
+
+      ast = parse_grammar(source)
+      output = formatter.format(ast)
+
+      expect(output).to include("%define api.value.type {variant}")
+    end
+
+    it "formats explicit empty alternatives" do
+      source = <<~GRAMMAR
+        %%
+        opt
+            : %empty
+            | ITEM
+            ;
+        %%
+      GRAMMAR
+
+      ast = parse_grammar(source)
+      output = formatter.format(ast)
+
+      expect(output).to include(": %empty")
+      expect(output).to include("| ITEM")
+    end
+
     it "formats simple rules" do
       source = <<~GRAMMAR
         %%
@@ -230,6 +260,7 @@ RSpec.describe Collie::Formatter::Formatter do
       output = formatter.format(ast)
 
       expect(output).to include("main")
+      expect(output).to include("int main() { return 0; }")
     end
   end
 end

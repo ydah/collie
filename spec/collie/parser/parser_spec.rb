@@ -113,6 +113,23 @@ RSpec.describe Collie::Parser::Parser do
       expect(ast.declarations[2].associativity).to eq(:nonassoc)
     end
 
+    it "preserves unknown declarations" do
+      source = <<~GRAMMAR
+        %define api.value.type {variant}
+        %%
+        %%
+      GRAMMAR
+
+      lexer = Collie::Parser::Lexer.new(source)
+      tokens = lexer.tokenize
+      parser = described_class.new(tokens)
+      ast = parser.parse
+
+      decl = ast.declarations.first
+      expect(decl).to be_a(Collie::AST::UnknownDeclaration)
+      expect(decl.source).to eq("%define api.value.type {variant}")
+    end
+
     it "parses start declaration" do
       source = <<~GRAMMAR
         %start program
@@ -190,6 +207,26 @@ RSpec.describe Collie::Parser::Parser do
       expect(alt.prec).to eq("UMINUS")
     end
 
+    it "parses explicit empty alternatives" do
+      source = <<~GRAMMAR
+        %%
+        opt
+            : %empty
+            | ITEM
+            ;
+        %%
+      GRAMMAR
+
+      lexer = Collie::Parser::Lexer.new(source)
+      tokens = lexer.tokenize
+      parser = described_class.new(tokens)
+      ast = parser.parse
+
+      rule = ast.rules.first
+      expect(rule.alternatives.first.explicit_empty).to be true
+      expect(rule.alternatives.last.symbols.first.name).to eq("ITEM")
+    end
+
     it "parses epilogue section" do
       source = <<~GRAMMAR
         %%
@@ -206,6 +243,7 @@ RSpec.describe Collie::Parser::Parser do
 
       expect(ast.epilogue).not_to be_nil
       expect(ast.epilogue.code).to include("main")
+      expect(ast.epilogue.code).to include("  return 0;")
     end
 
     it "parses complete grammar with all sections" do

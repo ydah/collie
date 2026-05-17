@@ -72,6 +72,12 @@ module Collie
           output << ""
         end
 
+        # Keep directives Collie does not parse yet instead of dropping them.
+        if grouped[AST::UnknownDeclaration]
+          output << format_unknown_declarations(grouped[AST::UnknownDeclaration])
+          output << ""
+        end
+
         # Format start declaration
         if grouped[AST::StartDeclaration]
           start_decl = grouped[AST::StartDeclaration].first
@@ -153,6 +159,10 @@ module Collie
         end.join("\n")
       end
 
+      def format_unknown_declarations(declarations)
+        declarations.map(&:source).join("\n")
+      end
+
       def format_parameterized_rule_declarations(declarations)
         declarations.map do |decl|
           params = "(#{decl.parameters.join(', ')})"
@@ -198,7 +208,7 @@ module Collie
       end
 
       def format_alternative(alt)
-        symbols_str = alt.symbols.map { |sym| format_symbol(sym) }.join(" ")
+        symbols_str = alt.explicit_empty ? "%empty" : alt.symbols.map { |sym| format_symbol(sym) }.join(" ")
         action_str = alt.action ? " #{alt.action.code}" : ""
         prec_str = alt.prec ? " %prec #{alt.prec}" : ""
 

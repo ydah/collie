@@ -86,6 +86,8 @@ module Collie
             # %inline for Lrama extensions
             advance
             declarations << parse_inline_declaration
+          when :UNKNOWN_DECLARATION
+            declarations << parse_unknown_declaration
           else
             advance # Skip unknown declarations for now
           end
@@ -250,6 +252,15 @@ module Collie
         )
       end
 
+      def parse_unknown_declaration
+        token = expect(:UNKNOWN_DECLARATION)
+
+        AST::UnknownDeclaration.new(
+          source: token.value,
+          location: token.location
+        )
+      end
+
       def parse_rules
         rules = []
 
@@ -363,6 +374,7 @@ module Collie
         symbols = []
         action = nil
         prec = nil
+        explicit_empty = false
         start_location = current_token.location
 
         until match?(:PIPE) || match?(:SEMICOLON) || match?(:ACTION) ||
@@ -370,6 +382,9 @@ module Collie
           if match?(:PREC)
             advance
             prec = token_value(current_token)
+            advance
+          elsif match?(:EMPTY)
+            explicit_empty = true
             advance
           elsif match?(:IDENTIFIER) || match?(:STRING) || match?(:CHAR)
             symbol_token = current_token
@@ -420,6 +435,7 @@ module Collie
           symbols: symbols,
           action: action,
           prec: prec,
+          explicit_empty: explicit_empty,
           location: symbols.first&.location || start_location
         )
       end
@@ -428,6 +444,13 @@ module Collie
         return nil unless match?(:SECTION_SEPARATOR)
 
         advance
+
+        if match?(:EPILOGUE)
+          token = current_token
+          advance
+          return AST::Epilogue.new(code: token.value, location: token.location) unless token.value.empty?
+        end
+
         code = +""
 
         until match?(:EOF)

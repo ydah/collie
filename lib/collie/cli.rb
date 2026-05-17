@@ -128,10 +128,7 @@ module Collie
 
     def lint_file(file, config)
       source = File.read(file)
-      lexer = Parser::Lexer.new(source, filename: file)
-      tokens = lexer.tokenize
-      parser = Parser::Parser.new(tokens)
-      ast = parser.parse
+      ast = parse_source(source, filename: file)
 
       symbol_table = build_symbol_table(ast)
       context = { symbol_table: symbol_table, source: source, file: file }
@@ -198,12 +195,10 @@ module Collie
 
     def format_file(file, formatter, check: false, diff: false)
       source = File.read(file)
-      lexer = Parser::Lexer.new(source, filename: file)
-      tokens = lexer.tokenize
-      parser = Parser::Parser.new(tokens)
-      ast = parser.parse
+      ast = parse_source(source, filename: file)
 
       formatted = formatter.format(ast)
+      parse_source(formatted, filename: file)
 
       if check
         if source == formatted
@@ -231,6 +226,13 @@ module Collie
     rescue Error => e
       say "Error formatting #{file}: #{e.message}", :red
       :failed
+    end
+
+    def parse_source(source, filename:)
+      lexer = Parser::Lexer.new(source, filename: filename)
+      tokens = lexer.tokenize
+      parser = Parser::Parser.new(tokens)
+      parser.parse
     end
 
     def filter_rules(rules)
