@@ -141,6 +141,22 @@ RSpec.describe Collie::Formatter::Formatter do
       expect(output).to include("%define api.value.type {variant}")
     end
 
+    it "preserves declaration order around unknown directives" do
+      source = <<~GRAMMAR
+        %token NUMBER
+        %code requires { typedef int value_t; }
+        %token IDENTIFIER
+        %%
+        %%
+      GRAMMAR
+
+      ast = parse_grammar(source)
+      output = formatter.format(ast)
+
+      expect(output.index("%token NUMBER")).to be < output.index("%code requires")
+      expect(output.index("%code requires")).to be < output.index("%token IDENTIFIER")
+    end
+
     it "keeps unknown directive action blocks" do
       source = <<~GRAMMAR
         %code {

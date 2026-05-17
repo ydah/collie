@@ -45,60 +45,44 @@ module Collie
       end
 
       def format_declarations(declarations)
-        grouped = declarations.group_by(&:class)
         output = []
+        index = 0
 
-        # Format token declarations
-        if grouped[AST::TokenDeclaration]
-          output << format_token_declarations(grouped[AST::TokenDeclaration])
+        while index < declarations.length
+          declaration = declarations[index]
+          declarations_group = consecutive_declarations(declarations, index, declaration.class)
+          output << format_declaration_group(declarations_group)
           output << ""
-        end
-
-        # Format type declarations
-        if grouped[AST::TypeDeclaration]
-          output << format_type_declarations(grouped[AST::TypeDeclaration])
-          output << ""
-        end
-
-        # Format precedence declarations
-        if grouped[AST::PrecedenceDeclaration]
-          output << format_precedence_declarations(grouped[AST::PrecedenceDeclaration])
-          output << ""
-        end
-
-        # Format union declarations
-        if grouped[AST::UnionDeclaration]
-          output << format_union_declarations(grouped[AST::UnionDeclaration])
-          output << ""
-        end
-
-        # Keep directives Collie does not parse yet instead of dropping them.
-        if grouped[AST::UnknownDeclaration]
-          output << format_unknown_declarations(grouped[AST::UnknownDeclaration])
-          output << ""
-        end
-
-        # Format start declaration
-        if grouped[AST::StartDeclaration]
-          start_decl = grouped[AST::StartDeclaration].first
-          output << "%start #{start_decl.symbol}"
-          output << ""
-        end
-
-        # Format %rule declarations (Lrama extension)
-        if grouped[AST::ParameterizedRule]
-          output << format_parameterized_rule_declarations(grouped[AST::ParameterizedRule])
-          output << ""
-        end
-
-        # Format %inline declarations (Lrama extension)
-        if grouped[AST::InlineRule]
-          output << format_inline_rule_declarations(grouped[AST::InlineRule])
-          output << ""
+          index += declarations_group.length
         end
 
         output.pop while output.last == ""
         output.join("\n")
+      end
+
+      def consecutive_declarations(declarations, start_index, declaration_class)
+        declarations[start_index..].take_while { |declaration| declaration.is_a?(declaration_class) }
+      end
+
+      def format_declaration_group(declarations)
+        case declarations.first
+        when AST::TokenDeclaration
+          format_token_declarations(declarations)
+        when AST::TypeDeclaration
+          format_type_declarations(declarations)
+        when AST::PrecedenceDeclaration
+          format_precedence_declarations(declarations)
+        when AST::UnionDeclaration
+          format_union_declarations(declarations)
+        when AST::UnknownDeclaration
+          format_unknown_declarations(declarations)
+        when AST::StartDeclaration
+          format_start_declarations(declarations)
+        when AST::ParameterizedRule
+          format_parameterized_rule_declarations(declarations)
+        when AST::InlineRule
+          format_inline_rule_declarations(declarations)
+        end
       end
 
       def format_token_declarations(declarations)
@@ -161,6 +145,10 @@ module Collie
 
       def format_unknown_declarations(declarations)
         declarations.map(&:source).join("\n")
+      end
+
+      def format_start_declarations(declarations)
+        declarations.map { |decl| "%start #{decl.symbol}" }.join("\n")
       end
 
       def format_parameterized_rule_declarations(declarations)
