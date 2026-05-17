@@ -39,6 +39,37 @@ RSpec.describe Collie::Formatter::Formatter do
       expect(output).to include("    : NUMBER")
     end
 
+    it "honors disabled alternative alignment" do
+      source = <<~GRAMMAR
+        %%
+        expr
+            : NUMBER
+            | IDENTIFIER
+            ;
+        %%
+      GRAMMAR
+
+      ast = parse_grammar(source)
+      formatter = described_class.new(Collie::Formatter::Options.new("align_alternatives" => false))
+      output = formatter.format(ast)
+
+      expect(output).to include("expr\n: NUMBER\n| IDENTIFIER\n;")
+    end
+
+    it "wraps long declarations using max_line_length" do
+      source = <<~GRAMMAR
+        %token FIRST SECOND THIRD FOURTH FIFTH
+        %%
+        %%
+      GRAMMAR
+
+      ast = parse_grammar(source)
+      formatter = described_class.new(Collie::Formatter::Options.new("max_line_length" => 24))
+      output = formatter.format(ast)
+
+      expect(output).to include("%token FIRST SECOND\n  THIRD FOURTH FIFTH")
+    end
+
     it "formats token declarations" do
       source = <<~GRAMMAR
         %token NUMBER IDENTIFIER

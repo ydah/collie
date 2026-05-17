@@ -97,23 +97,20 @@ module Collie
         max_tag_length = declarations.map { |d| d.type_tag ? d.type_tag.length + 2 : 0 }.max || 0
         declarations.map do |decl|
           tag = decl.type_tag ? "<#{decl.type_tag}>" : ""
-          if tag.empty?
-            "%token #{decl.names.join(' ')}"
-          else
-            "%token #{tag.ljust(max_tag_length)} #{decl.names.join(' ')}"
-          end
+          prefix = tag.empty? ? "%token" : "%token #{tag.ljust(max_tag_length)}"
+          wrap_declaration(prefix, decl.names)
         end.join("\n")
       end
 
       def format_token_declaration(decl)
         tag = decl.type_tag ? " <#{decl.type_tag}>" : ""
-        "%token#{tag} #{decl.names.join(' ')}"
+        wrap_declaration("%token#{tag}", decl.names)
       end
 
       def format_type_declarations(declarations)
         declarations.map do |decl|
           tag = decl.type_tag ? " <#{decl.type_tag}>" : ""
-          "%type#{tag} #{decl.names.join(' ')}"
+          wrap_declaration("%type#{tag}", decl.names)
         end.join("\n")
       end
 
@@ -128,12 +125,29 @@ module Collie
 
         declarations.map do |decl|
           directive = directive_names[decl.associativity]
-          if @options.align_tokens
-            "#{directive.ljust(max_directive_length)} #{decl.tokens.join(' ')}"
-          else
-            "#{directive} #{decl.tokens.join(' ')}"
-          end
+          prefix = @options.align_tokens ? directive.ljust(max_directive_length) : directive
+          wrap_declaration(prefix, decl.tokens)
         end.join("\n")
+      end
+
+      def wrap_declaration(prefix, names)
+        return prefix if names.empty?
+
+        lines = []
+        current = prefix
+
+        names.each do |name|
+          candidate = "#{current} #{name}"
+          if current != prefix && candidate.length > @options.max_line_length
+            lines << current
+            current = "#{@options.indent}#{name}"
+          else
+            current = candidate
+          end
+        end
+
+        lines << current
+        lines.join("\n")
       end
 
       def format_union_declarations(declarations)
@@ -184,7 +198,7 @@ module Collie
         end
 
         output = [rule_header]
-        indent = @options.indent
+        indent = @options.align_alternatives ? @options.indent : ""
 
         rule.alternatives.each_with_index do |alt, index|
           prefix = index.zero? ? "#{indent}:" : "#{indent}|"
