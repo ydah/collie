@@ -64,5 +64,23 @@ RSpec.describe Collie::Linter::Rules::LeftRecursion do
       offenses = rule.check(grammar)
       expect(offenses).to be_empty
     end
+
+    it "detects left recursion in inline declarations" do
+      alternative = Collie::AST::Alternative.new(
+        symbols: [
+          Collie::AST::Symbol.new(name: "expr", kind: :nonterminal, location: nil),
+          Collie::AST::Symbol.new(name: "PLUS", kind: :terminal, location: nil)
+        ],
+        location: nil
+      )
+      inline = Collie::AST::InlineRule.new(rule: "expr", alternatives: [alternative], location: nil)
+      grammar = Collie::AST::GrammarFile.new(rules: [], declarations: [inline])
+
+      offenses = rule.check(grammar)
+      expect(offenses.map(&:message)).to include(
+        "Rule 'expr' uses left recursion. This is normal for LR parsers; " \
+        "review only if targeting LL parser portability."
+      )
+    end
   end
 end

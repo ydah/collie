@@ -15,7 +15,7 @@ module Collie
           result = analyzer.analyze
 
           result[:left_recursive].each do |rule_name|
-            rule = ast.rules.find { |r| r.name == rule_name }
+            rule = find_rule_like(ast, rule_name)
             next unless rule
 
             add_offense(

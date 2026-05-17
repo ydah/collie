@@ -29,40 +29,35 @@ module Collie
       private
 
       def build_dependency_graph
-        # Process normal rules
-        @grammar.rules.each do |rule|
+        rule_like_nodes.each do |rule|
+          current_rule_name = rule_name(rule)
+
           rule.alternatives.each do |alt|
             alt.symbols.each do |symbol|
               if symbol.nonterminal?
-                @dependencies[rule.name] << symbol.name
+                @dependencies[current_rule_name] << symbol.name
                 # Also consider parameterized rule call arguments: list(expr)
                 if symbol.arguments
                   symbol.arguments.each do |arg|
-                    @dependencies[rule.name] << arg.name if arg.nonterminal?
+                    @dependencies[current_rule_name] << arg.name if arg.nonterminal?
                   end
                 end
               end
             end
           end
         end
+      end
 
-        # Process parameterized rules (%rule)
-        @grammar.declarations.each do |decl|
-          next unless decl.is_a?(AST::ParameterizedRule)
+      def rule_like_nodes
+        @grammar.rules + @grammar.declarations.select { |declaration| rule_like_declaration?(declaration) }
+      end
 
-          decl.alternatives.each do |alt|
-            alt.symbols.each do |symbol|
-              if symbol.nonterminal?
-                @dependencies[decl.name] << symbol.name
-                if symbol.arguments
-                  symbol.arguments.each do |arg|
-                    @dependencies[decl.name] << arg.name if arg.nonterminal?
-                  end
-                end
-              end
-            end
-          end
-        end
+      def rule_like_declaration?(declaration)
+        declaration.is_a?(AST::ParameterizedRule) || declaration.is_a?(AST::InlineRule)
+      end
+
+      def rule_name(rule)
+        rule.is_a?(AST::InlineRule) ? rule.rule : rule.name
       end
 
       def infer_start_symbol

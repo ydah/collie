@@ -15,7 +15,7 @@ module Collie
       end
 
       def analyze
-        @grammar.rules.each do |rule|
+        rule_like_nodes.each do |rule|
           check_left_recursion(rule)
           check_right_recursion(rule)
         end
@@ -36,13 +36,27 @@ module Collie
 
       private
 
+      def rule_like_nodes
+        @grammar.rules + @grammar.declarations.select { |declaration| rule_like_declaration?(declaration) }
+      end
+
+      def rule_like_declaration?(declaration)
+        declaration.is_a?(AST::ParameterizedRule) || declaration.is_a?(AST::InlineRule)
+      end
+
+      def rule_name(rule)
+        rule.is_a?(AST::InlineRule) ? rule.rule : rule.name
+      end
+
       def check_left_recursion(rule)
+        name = rule_name(rule)
+
         rule.alternatives.each do |alt|
           next if alt.symbols.empty?
 
           first_symbol = alt.symbols.first
-          if first_symbol.nonterminal? && first_symbol.name == rule.name && !@left_recursive.include?(rule.name)
-            @left_recursive << rule.name
+          if first_symbol.nonterminal? && first_symbol.name == name && !@left_recursive.include?(name)
+            @left_recursive << name
           end
         end
 
@@ -51,23 +65,26 @@ module Collie
       end
 
       def check_right_recursion(rule)
+        name = rule_name(rule)
+
         rule.alternatives.each do |alt|
           next if alt.symbols.empty?
 
           last_symbol = alt.symbols.last
-          if last_symbol.nonterminal? && last_symbol.name == rule.name && !@right_recursive.include?(rule.name)
-            @right_recursive << rule.name
+          if last_symbol.nonterminal? && last_symbol.name == name && !@right_recursive.include?(name)
+            @right_recursive << name
           end
         end
       end
 
       def check_indirect_left_recursion(rule, visited = Set.new)
-        return if visited.include?(rule.name)
+        name = rule_name(rule)
+        return if visited.include?(name)
 
-        visited << rule.name
+        visited << name
 
         rule.alternatives.each do |alt|
-          check_alternative_for_indirect_recursion(alt, rule.name)
+          check_alternative_for_indirect_recursion(alt, name)
         end
       end
 
@@ -77,7 +94,7 @@ module Collie
         first_symbol = alt.symbols.first
         return unless first_symbol.nonterminal?
 
-        dependent_rule = @grammar.rules.find { |r| r.name == first_symbol.name }
+        dependent_rule = rule_like_nodes.find { |candidate| rule_name(candidate) == first_symbol.name }
         return unless dependent_rule
 
         check_dependent_rule_for_recursion(dependent_rule, rule_name)

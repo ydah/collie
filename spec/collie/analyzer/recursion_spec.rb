@@ -70,6 +70,23 @@ RSpec.describe Collie::Analyzer::Recursion do
       expect(result[:left_recursive]).to include("expr")
       expect(result[:right_recursive]).to include("expr")
     end
+
+    it "detects recursion in inline declarations" do
+      alternative = Collie::AST::Alternative.new(
+        symbols: [
+          Collie::AST::Symbol.new(name: "ITEM", kind: :terminal, location: nil),
+          Collie::AST::Symbol.new(name: "items", kind: :nonterminal, location: nil)
+        ],
+        location: nil
+      )
+      inline = Collie::AST::InlineRule.new(rule: "items", alternatives: [alternative], location: nil)
+      grammar = Collie::AST::GrammarFile.new(rules: [], declarations: [inline])
+
+      analyzer = described_class.new(grammar)
+      result = analyzer.analyze
+
+      expect(result[:right_recursive]).to include("items")
+    end
   end
 
   describe "#left_recursive?" do

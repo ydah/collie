@@ -98,6 +98,14 @@ module Collie
       def rule_like_parameters(rule)
         rule.respond_to?(:parameters) ? rule.parameters : []
       end
+
+      def find_rule_like(ast, name)
+        each_rule_like(ast) do |rule|
+          return rule if rule_like_name(rule) == name
+        end
+
+        nil
+      end
     end
   end
 end

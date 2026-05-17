@@ -73,6 +73,30 @@ RSpec.describe Collie::Analyzer::Reachability do
 
       expect(reachable).to include("start", "expr")
     end
+
+    it "follows dependencies inside inline declarations" do
+      grammar = create_grammar({
+                                 "start" => [["wrapper"]],
+                                 "helper" => [["NUMBER"]]
+                               })
+      inline = Collie::AST::InlineRule.new(
+        rule: "wrapper",
+        alternatives: [
+          Collie::AST::Alternative.new(
+            symbols: [Collie::AST::Symbol.new(name: "helper", kind: :nonterminal, location: nil)],
+            location: nil
+          )
+        ],
+        location: nil
+      )
+      grammar.declarations << inline
+
+      analyzer = described_class.new(grammar)
+      reachable = analyzer.analyze("start")
+
+      expect(reachable).to include("start", "wrapper", "helper")
+      expect(analyzer.unreachable_rules).to be_empty
+    end
   end
 
   describe "#unreachable_rules" do

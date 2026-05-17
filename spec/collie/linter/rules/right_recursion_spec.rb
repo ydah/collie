@@ -53,5 +53,22 @@ RSpec.describe Collie::Linter::Rules::RightRecursion do
       offenses = rule.check(grammar)
       expect(offenses).to be_empty
     end
+
+    it "detects right recursion in inline declarations" do
+      alternative = Collie::AST::Alternative.new(
+        symbols: [
+          Collie::AST::Symbol.new(name: "ITEM", kind: :terminal, location: nil),
+          Collie::AST::Symbol.new(name: "items", kind: :nonterminal, location: nil)
+        ],
+        location: nil
+      )
+      inline = Collie::AST::InlineRule.new(rule: "items", alternatives: [alternative], location: nil)
+      grammar = Collie::AST::GrammarFile.new(rules: [], declarations: [inline])
+
+      offenses = rule.check(grammar)
+      expect(offenses.map(&:message)).to include(
+        "Rule 'items' uses right recursion (consider left recursion for better LR parser performance)"
+      )
+    end
   end
 end
