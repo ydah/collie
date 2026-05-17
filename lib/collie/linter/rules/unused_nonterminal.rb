@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "set"
+
 require_relative "../base"
 
 module Collie
@@ -77,11 +79,13 @@ module Collie
 
           # Mark start symbol as used
           symbol_table.use_nonterminal(start_symbol) if start_symbol
+          unreachable_rules = unreachable_rules(ast, start_symbol)
 
           # Find unused nonterminals
           symbol_table.unused_nonterminals.each do |nonterminal_name|
             # Skip start symbol
             next if nonterminal_name == start_symbol
+            next if unreachable_rules.include?(nonterminal_name)
 
             rule = ast.rules.find { |r| r.name == nonterminal_name }
             next unless rule
@@ -101,6 +105,14 @@ module Collie
 
           # Default to first rule
           ast.rules.first&.name
+        end
+
+        def unreachable_rules(ast, start_symbol)
+          return Set.new unless start_symbol
+
+          analyzer = Analyzer::Reachability.new(ast)
+          analyzer.analyze(start_symbol)
+          analyzer.unreachable_rules
         end
       end
     end

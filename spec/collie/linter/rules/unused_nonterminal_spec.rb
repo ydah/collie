@@ -20,8 +20,24 @@ RSpec.describe Collie::Linter::Rules::UnusedNonterminal do
         start
             : item
             ;
+        %%
+      GRAMMAR
+
+      ast = parse_grammar(source)
+      offenses = described_class.new.check(ast)
+
+      expect(offenses).to be_empty
+    end
+
+    it "leaves unreachable rules to UnreachableRule" do
+      source = <<~GRAMMAR
+        %token ITEM
+        %%
+        start
+            : ITEM
+            ;
         unused
-            : item
+            : ITEM
             ;
         %%
       GRAMMAR
@@ -29,7 +45,7 @@ RSpec.describe Collie::Linter::Rules::UnusedNonterminal do
       ast = parse_grammar(source)
       offenses = described_class.new.check(ast)
 
-      expect(offenses.map(&:message)).to include("Nonterminal 'unused' is defined but never used")
+      expect(offenses).to be_empty
     end
   end
 end
