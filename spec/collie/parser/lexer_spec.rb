@@ -41,6 +41,15 @@ RSpec.describe Collie::Parser::Lexer do
       expect(tokens[0].value).to eq("%define api.value.type {variant}")
     end
 
+    it "keeps unknown directive action blocks as a single token" do
+      source = "%code {\n  puts \"}\"\n}\n%%"
+      lexer = described_class.new(source)
+      tokens = lexer.tokenize
+
+      expect(tokens[0].type).to eq(:UNKNOWN_DECLARATION)
+      expect(tokens[0].value).to eq("%code {\n  puts \"}\"\n}")
+    end
+
     it "keeps epilogue as raw source after the second section separator" do
       source = "%%\n%%\nint main() {\n  return 0;\n}\n"
       lexer = described_class.new(source)

@@ -248,16 +248,39 @@ module Collie
       def tokenize_unknown_declaration(start_line, start_column, directive)
         buffer = +directive
 
-        until eof? || current_char == "\n"
-          buffer << current_char
-          advance
-        end
+        append_unknown_declaration_content(buffer)
 
         Token.new(
           type: :UNKNOWN_DECLARATION,
           value: buffer.rstrip,
           location: make_location(start_line, start_column, buffer.length)
         )
+      end
+
+      def append_unknown_declaration_content(buffer)
+        action_depth = 0
+
+        until eof?
+          break if action_depth.zero? && current_char == "\n"
+
+          if action_depth.positive? && (current_char == '"' || current_char == "'")
+            append_quoted_action_content(buffer, current_char)
+            next
+          elsif action_depth.positive? && current_char == "/" && peek_char == "/"
+            append_line_comment_action_content(buffer)
+            next
+          elsif action_depth.positive? && current_char == "/" && peek_char == "*"
+            append_block_comment_action_content(buffer)
+            next
+          elsif current_char == "{"
+            action_depth += 1
+          elsif current_char == "}" && action_depth.positive?
+            action_depth -= 1
+          end
+
+          buffer << current_char
+          advance
+        end
       end
 
       def tokenize_action

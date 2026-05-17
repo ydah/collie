@@ -141,6 +141,21 @@ RSpec.describe Collie::Formatter::Formatter do
       expect(output).to include("%define api.value.type {variant}")
     end
 
+    it "keeps unknown directive action blocks" do
+      source = <<~GRAMMAR
+        %code {
+          puts "}"
+        }
+        %%
+        %%
+      GRAMMAR
+
+      ast = parse_grammar(source)
+      output = formatter.format(ast)
+
+      expect(output).to include("%code {\n  puts \"}\"\n}")
+    end
+
     it "formats explicit empty alternatives" do
       source = <<~GRAMMAR
         %%
