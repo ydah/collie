@@ -153,7 +153,7 @@ module Collie
 
       def format_parameterized_rule_declarations(declarations)
         declarations.map do |decl|
-          params = "(#{decl.parameters.join(', ')})"
+          params = decl.parameters.empty? ? "" : "(#{decl.parameters.join(', ')})"
           alternatives = decl.alternatives.map { |alt| format_alternative(alt) }.join(" | ")
           "%rule #{decl.name}#{params}: #{alternatives} ;"
         end.join("\n")
