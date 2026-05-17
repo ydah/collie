@@ -78,6 +78,18 @@ RSpec.describe "CLI integration" do
       expect($CHILD_STATUS.exitstatus).to eq(1)
     end
 
+    it "exits with failure for missing config files" do
+      Tempfile.create(["test", ".y"]) do |f|
+        f.write(valid_grammar_without_warnings)
+        f.flush
+
+        output = `bundle exec exe/collie lint --config /tmp/collie-missing-config.yml #{f.path} 2>&1`
+
+        expect(output).to include("Config file not found")
+        expect($CHILD_STATUS.exitstatus).to eq(1)
+      end
+    end
+
     it "supports comma-separated --only rule names" do
       Tempfile.create(["test", ".y"]) do |f|
         f.write(<<~GRAMMAR)

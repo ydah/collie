@@ -31,7 +31,7 @@ module Collie
     option :stdin, type: :boolean, desc: "Read source from standard input"
     option :stdin_filename, type: :string, default: "<stdin>", desc: "Filename to use for standard input"
     def lint(*files)
-      config = Config.new(options[:config])
+      config = load_config
       Linter::Registry.load_rules
 
       return lint_stdin(config) if options[:stdin]
@@ -69,7 +69,7 @@ module Collie
     option :stdin, type: :boolean, desc: "Read source from standard input"
     option :stdin_filename, type: :string, default: "<stdin>", desc: "Filename to use for standard input"
     def fmt(*files)
-      config = Config.new(options[:config])
+      config = load_config
       formatter = Formatter::Formatter.new(Formatter::Options.new(config.formatter_options))
 
       return fmt_stdin(formatter) if options[:stdin]
@@ -102,7 +102,7 @@ module Collie
     option :config, type: :string, desc: "Config file path"
     option :format, type: :string, default: "text", enum: %w[text json]
     def rules
-      config = Config.new(options[:config])
+      config = load_config
       Linter::Registry.load_rules
 
       if options[:format] == "json"
@@ -129,7 +129,7 @@ module Collie
     option :config, type: :string, desc: "Config file path"
     option :format, type: :string, default: "text", enum: %w[text json]
     def explain(rule_name)
-      config = Config.new(options[:config])
+      config = load_config
       Linter::Registry.load_rules
 
       rule = Linter::Registry.find(rule_name)
@@ -166,6 +166,13 @@ module Collie
     end
 
     private
+
+    def load_config
+      Config.new(options[:config])
+    rescue Error => e
+      say e.message, :red
+      exit 1
+    end
 
     def lint_stdin(config)
       source = $stdin.read

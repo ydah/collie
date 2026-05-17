@@ -59,8 +59,13 @@ module Collie
 
     def load_config(config_path)
       config = DEFAULT_CONFIG.dup
-      path = config_path if config_path && File.exist?(config_path)
-      path ||= ".collie.yml" if File.exist?(".collie.yml")
+      if config_path
+        raise Error, "Config file not found: #{config_path}" unless File.exist?(config_path)
+
+        path = config_path
+      else
+        path = ".collie.yml" if File.exist?(".collie.yml")
+      end
       return config unless path
 
       user_config = load_yaml_config(path)

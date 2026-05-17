@@ -105,6 +105,11 @@ RSpec.describe Collie::Config do
         expect { described_class.new(f.path) }.to raise_error(Collie::Error, /YAML mapping/)
       end
     end
+
+    it "rejects explicitly missing config files" do
+      expect { described_class.new("/tmp/collie-missing-config.yml") }
+        .to raise_error(Collie::Error, /Config file not found/)
+    end
   end
 
   describe "#included_patterns" do
