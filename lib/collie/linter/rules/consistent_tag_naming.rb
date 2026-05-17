@@ -17,7 +17,7 @@ module Collie
           styles = tags.group_by { |tag, _| detect_style(tag) }
 
           # If we have multiple styles, report inconsistency
-          add_inconsistency_offense(ast, styles) if styles.size > 1
+          add_inconsistency_offenses(styles) if styles.size > 1
 
           @offenses
         end
@@ -45,21 +45,21 @@ module Collie
           :other
         end
 
-        def add_inconsistency_offense(ast, styles)
+        Node = Struct.new(:location)
+
+        def add_inconsistency_offenses(styles)
           style_names = styles.keys.map(&:to_s).join(", ")
           most_common_style = styles.max_by { |_, tags| tags.size }[0]
+          expected_tags = styles.fetch(most_common_style)
+          outliers = styles.reject { |style, _| style == most_common_style }.values.flatten(1)
 
-          # Add offense at the first declaration
-          first_decl = ast.declarations.first
-          location = first_decl&.location || AST::Location.new(file: "grammar", line: 1, column: 1)
-
-          offense = Offense.new(
-            rule: self.class,
-            location: location,
-            message: "Inconsistent type tag naming styles detected (#{style_names}). " \
-                     "Consider using #{most_common_style} throughout."
-          )
-          @offenses << offense
+          outliers.each do |tag, location|
+            add_offense(
+              Node.new(location || expected_tags.first[1] || AST::Location.new(file: "grammar", line: 1, column: 1)),
+              message: "Type tag '#{tag}' uses a different naming style (#{style_names}). " \
+                       "Consider using #{most_common_style} throughout."
+            )
+          end
         end
       end
     end

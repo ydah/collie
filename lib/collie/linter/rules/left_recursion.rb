@@ -6,8 +6,8 @@ module Collie
       # Detects left recursion in grammar rules
       class LeftRecursion < Base
         self.rule_name = "LeftRecursion"
-        self.description = "Detects left recursion (may cause issues with some parsers)"
-        self.severity = :warning
+        self.description = "Notes left recursion for LL parser portability"
+        self.severity = :info
         self.autocorrectable = false
 
         def check(ast, _context = {})
@@ -20,7 +20,8 @@ module Collie
 
             add_offense(
               rule,
-              message: "Rule '#{rule_name}' uses left recursion (consider using right recursion for LL parsers)"
+              message: "Rule '#{rule_name}' uses left recursion. This is normal for LR parsers; " \
+                       "review only if targeting LL parser portability."
             )
           end
 

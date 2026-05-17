@@ -34,6 +34,7 @@ RSpec.describe Collie::Linter::Rules::LeftRecursion do
       offenses = rule.check(grammar)
       expect(offenses).not_to be_empty
       expect(offenses.first.message).to include("left recursion")
+      expect(offenses.first.severity).to eq(:info)
     end
 
     it "detects indirect left recursion" do

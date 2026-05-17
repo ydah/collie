@@ -24,15 +24,14 @@ RSpec.describe Collie::Linter::Rules::RedundantEpsilon do
   end
 
   describe "#check" do
-    it "detects epsilon production with other alternatives" do
+    it "allows a single epsilon production with other alternatives" do
       grammar = create_grammar([
                                  ["NUMBER"],
                                  [] # Empty/epsilon
                                ])
 
       offenses = rule.check(grammar)
-      expect(offenses).not_to be_empty
-      expect(offenses.first.message).to include("epsilon production")
+      expect(offenses).to be_empty
     end
 
     it "allows rule with only non-epsilon alternatives" do
@@ -62,7 +61,20 @@ RSpec.describe Collie::Linter::Rules::RedundantEpsilon do
                                ])
 
       offenses = rule.check(grammar)
-      expect(offenses.size).to eq(2)
+      expect(offenses.size).to eq(1)
+      expect(offenses.first.message).to include("multiple epsilon productions")
+    end
+
+    it "detects duplicate explicit empty productions" do
+      empty_alternatives = [
+        Collie::AST::Alternative.new(explicit_empty: true, location: nil),
+        Collie::AST::Alternative.new(explicit_empty: true, location: nil)
+      ]
+      grammar_rule = Collie::AST::Rule.new(name: "expr", alternatives: empty_alternatives, location: nil)
+      grammar = Collie::AST::GrammarFile.new(rules: [grammar_rule], declarations: [])
+
+      offenses = rule.check(grammar)
+      expect(offenses.size).to eq(1)
     end
   end
 end

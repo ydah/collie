@@ -6,7 +6,7 @@ module Collie
       # Detects potentially redundant epsilon productions
       class RedundantEpsilon < Base
         self.rule_name = "RedundantEpsilon"
-        self.description = "Detects potentially redundant epsilon (empty) productions"
+        self.description = "Detects duplicate epsilon (empty) productions"
         self.severity = :info
         self.autocorrectable = false
 
@@ -21,20 +21,20 @@ module Collie
         private
 
         def check_rule(rule)
-          epsilon_alternatives = rule.alternatives.select { |alt| alt.symbols.empty? }
-          return if epsilon_alternatives.empty?
+          epsilon_alternatives = rule.alternatives.select { |alt| epsilon?(alt) }
+          return if epsilon_alternatives.size < 2
 
-          # Only report if there are other non-epsilon alternatives
-          non_epsilon_alternatives = rule.alternatives.reject { |alt| alt.symbols.empty? }
-          return if non_epsilon_alternatives.empty?
-
-          epsilon_alternatives.each do |alt|
+          epsilon_alternatives.drop(1).each do |alt|
             add_offense(
               alt,
-              message: "Rule '#{rule.name}' has an epsilon production. " \
-                       "Verify if it's necessary or if the rule can be made optional elsewhere."
+              message: "Rule '#{rule.name}' has multiple epsilon productions. " \
+                       "Keep one empty alternative and remove duplicates."
             )
           end
+        end
+
+        def epsilon?(alternative)
+          alternative.symbols.empty? || alternative.explicit_empty
         end
       end
     end

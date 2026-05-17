@@ -8,11 +8,11 @@ RSpec.describe Collie::Linter::Rules::ConsistentTagNaming do
   let(:rule) { described_class.new({}) }
 
   def create_grammar(type_tags)
-    declarations = type_tags.map do |tag|
+    declarations = type_tags.each_with_index.map do |tag, index|
       Collie::AST::TokenDeclaration.new(
         names: ["TOKEN"],
         type_tag: tag,
-        location: nil
+        location: Collie::AST::Location.new(file: "test.y", line: index + 1, column: 1)
       )
     end
 
@@ -39,7 +39,7 @@ RSpec.describe Collie::Linter::Rules::ConsistentTagNaming do
 
       offenses = rule.check(grammar)
       expect(offenses).not_to be_empty
-      expect(offenses.first.message).to include("Inconsistent type tag naming")
+      expect(offenses.first.message).to include("different naming style")
     end
 
     it "suggests the most common style" do
@@ -48,6 +48,14 @@ RSpec.describe Collie::Linter::Rules::ConsistentTagNaming do
       offenses = rule.check(grammar)
       expect(offenses).not_to be_empty
       expect(offenses.first.message).to include("snake_case")
+      expect(offenses.first.location.line).to eq(3)
+    end
+
+    it "reports each outlier location" do
+      grammar = create_grammar(%w[snake_one snake_two camelCase PascalCase])
+
+      offenses = rule.check(grammar)
+      expect(offenses.map { |offense| offense.location.line }).to eq([3, 4])
     end
 
     it "allows single type tag" do
