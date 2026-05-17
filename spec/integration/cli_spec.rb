@@ -140,6 +140,16 @@ RSpec.describe "CLI integration" do
         expect($CHILD_STATUS.exitstatus).to eq(1)
       end
     end
+
+    it "lints source from stdin" do
+      command = "printf '%s' '%token NUMBER NUMBER\n%%\n%%\n' | " \
+                "bundle exec exe/collie lint --stdin --stdin-filename stdin.y"
+      output = `#{command} 2>&1`
+
+      expect(output).to include("stdin.y")
+      expect(output).to include("DuplicateToken")
+      expect($CHILD_STATUS.exitstatus).to eq(1)
+    end
   end
 
   describe "fmt command" do
@@ -187,6 +197,15 @@ RSpec.describe "CLI integration" do
 
       expect(output).to include("File not found")
       expect($CHILD_STATUS.exitstatus).to eq(1)
+    end
+
+    it "formats source from stdin" do
+      command = "printf '%s' '%%\nexpr: NUMBER ;\n%%\n' | bundle exec exe/collie fmt --stdin"
+      output = `#{command} 2>&1`
+
+      expect(output).to include("expr")
+      expect(output).to include(": NUMBER")
+      expect($CHILD_STATUS.exitstatus).to eq(0)
     end
   end
 

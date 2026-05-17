@@ -28,9 +28,13 @@ module Collie
     option :except, type: :array, desc: "Exclude specified rules"
     option :fail_level, type: :string, default: "error", enum: %w[error warning convention info],
                         desc: "Minimum severity that exits with failure"
+    option :stdin, type: :boolean, desc: "Read source from standard input"
+    option :stdin_filename, type: :string, default: "<stdin>", desc: "Filename to use for standard input"
     def lint(*files)
       config = Config.new(options[:config])
       Linter::Registry.load_rules
+
+      return lint_stdin(config) if options[:stdin]
 
       files = resolve_files(files, config)
       if files.empty?
@@ -62,15 +66,20 @@ module Collie
     option :check, type: :boolean, desc: "Check only, don't modify"
     option :diff, type: :boolean, desc: "Show diff"
     option :config, type: :string, desc: "Config file path"
+    option :stdin, type: :boolean, desc: "Read source from standard input"
+    option :stdin_filename, type: :string, default: "<stdin>", desc: "Filename to use for standard input"
     def fmt(*files)
       config = Config.new(options[:config])
+      formatter = Formatter::Formatter.new(Formatter::Options.new(config.formatter_options))
+
+      return fmt_stdin(formatter) if options[:stdin]
+
       files = resolve_files(files, config)
       if files.empty?
         say "No files matched", :red
         exit 1
       end
 
-      formatter = Formatter::Formatter.new(Formatter::Options.new(config.formatter_options))
       failed = false
       changed = false
 
@@ -137,19 +146,33 @@ module Collie
 
     private
 
+    def lint_stdin(config)
+      source = $stdin.read
+      offenses = lint_source(source, filename: options[:stdin_filename], config: config)
+
+      reporter = create_reporter(options[:format])
+      puts reporter.report(offenses)
+
+      exit 1 if fail_level_reached?(offenses)
+    end
+
     def lint_file(file, config)
       source = File.read(file)
-      ast = parse_source(source, filename: file)
+      lint_source(source, filename: file, config: config, autocorrect_path: file)
+    end
+
+    def lint_source(source, filename:, config:, autocorrect_path: nil)
+      ast = parse_source(source, filename: filename)
 
       symbol_table = build_symbol_table(ast)
-      context = { symbol_table: symbol_table, source: source, file: file }
+      context = { symbol_table: symbol_table, source: source, file: filename }
 
       offenses = run_lint_rules(ast, context, config)
-      apply_autocorrect(file, source, context, offenses) if options[:autocorrect]
+      apply_autocorrect(autocorrect_path, source, context, offenses) if autocorrect_path && options[:autocorrect]
 
       offenses
     rescue Error => e
-      [parse_error_offense(file, e.message)]
+      [parse_error_offense(filename, e.message)]
     end
 
     def build_symbol_table(ast)
@@ -203,12 +226,36 @@ module Collie
       say "Auto-corrected #{autocorrectable_offenses.size} offense(s) in #{file}", :green
     end
 
+    def fmt_stdin(formatter)
+      source = $stdin.read
+      formatted = format_source(source, formatter, filename: options[:stdin_filename])
+      exit 1 unless formatted
+
+      if options[:check]
+        if source == formatted
+          say "#{options[:stdin_filename]}: OK", :green
+        else
+          say "#{options[:stdin_filename]}: needs formatting", :yellow
+          show_diff(source, formatted) if options[:diff]
+          exit 1
+        end
+      elsif options[:diff]
+        if source == formatted
+          say "#{options[:stdin_filename]}: OK", :green
+        else
+          say "#{options[:stdin_filename]}: needs formatting", :yellow
+          show_diff(source, formatted)
+          exit 1
+        end
+      else
+        puts formatted
+      end
+    end
+
     def format_file(file, formatter, check: false, diff: false)
       source = File.read(file)
-      ast = parse_source(source, filename: file)
-
-      formatted = formatter.format(ast)
-      parse_source(formatted, filename: file)
+      formatted = format_source(source, formatter, filename: file)
+      return :failed unless formatted
 
       if check
         if source == formatted
@@ -236,6 +283,16 @@ module Collie
     rescue Error => e
       say "Error formatting #{file}: #{e.message}", :red
       :failed
+    end
+
+    def format_source(source, formatter, filename:)
+      ast = parse_source(source, filename: filename)
+      formatted = formatter.format(ast)
+      parse_source(formatted, filename: filename)
+      formatted
+    rescue Error => e
+      say "Error formatting #{filename}: #{e.message}", :red
+      nil
     end
 
     def parse_source(source, filename:)
