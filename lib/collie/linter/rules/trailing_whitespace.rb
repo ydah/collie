@@ -31,12 +31,18 @@ module Collie
               Node.new(location),
               message: "Trailing whitespace detected",
               autocorrect: lambda {
-                context[:source] = source.gsub(/[ \t]+\n/, "\n").gsub(/[ \t]+$/, "")
+                context[:source] = remove_trailing_whitespace(context[:source] || source)
               }
             )
           end
 
           @offenses
+        end
+
+        private
+
+        def remove_trailing_whitespace(source)
+          source.gsub(/[ \t]+\n/, "\n").gsub(/[ \t]+$/, "")
         end
       end
     end

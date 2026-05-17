@@ -61,6 +61,17 @@ RSpec.describe Collie::Linter::Rules::TrailingWhitespace do
       expect(context[:source]).to eq("line one\nline two\nline three")
     end
 
+    it "autocorrects the current context source" do
+      source = "line one  \n"
+      context = { source: source, file: "test.y" }
+
+      offenses = rule.check(ast, context)
+      context[:source] = "changed  \n"
+      offenses.first.autocorrect.call
+
+      expect(context[:source]).to eq("changed\n")
+    end
+
     it "handles empty context" do
       offenses = rule.check(ast, {})
       expect(offenses).to be_empty
