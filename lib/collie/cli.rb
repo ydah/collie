@@ -205,7 +205,13 @@ module Collie
           decl.names.each do |name|
             symbol_table.add_token(name, type_tag: decl.type_tag, location: decl.location)
           rescue Error
-            # Ignore duplicate declarations here, they'll be caught by lint rules
+            # Ignore duplicates while building the resolver table.
+          end
+        when AST::PrecedenceDeclaration
+          decl.tokens.each do |name|
+            symbol_table.add_token(name, location: decl.location)
+          rescue Error
+            # Ignore duplicates while building the resolver table.
           end
         when AST::ParameterizedRule
           symbol_table.add_nonterminal(decl.name, location: decl.location)

@@ -20,6 +20,7 @@ module Collie
           ast.rules.each do |rule|
             rule.alternatives.each do |alt|
               alt.symbols.each { |symbol| mark_token_usage(symbol_table, symbol) }
+              mark_precedence_usage(symbol_table, alt)
             end
           end
 
@@ -29,6 +30,7 @@ module Collie
 
             decl.alternatives.each do |alt|
               alt.symbols.each { |symbol| mark_token_usage(symbol_table, symbol) }
+              mark_precedence_usage(symbol_table, alt)
             end
           end
 
@@ -48,6 +50,10 @@ module Collie
           symbol.arguments&.each { |argument| mark_token_usage(symbol_table, argument) }
         end
 
+        def mark_precedence_usage(symbol_table, alternative)
+          symbol_table.use_token(alternative.prec) if alternative.prec
+        end
+
         def build_symbol_table(ast)
           table = Analyzer::SymbolTable.new
 
@@ -57,7 +63,13 @@ module Collie
               decl.names.each do |name|
                 table.add_token(name, type_tag: decl.type_tag, location: decl.location)
               rescue Error
-                # Ignore duplicates
+                # Ignore duplicates while building the resolver table.
+              end
+            when AST::PrecedenceDeclaration
+              decl.tokens.each do |name|
+                table.add_token(name, location: decl.location)
+              rescue Error
+                # Ignore duplicates while building the resolver table.
               end
             end
           end
@@ -68,13 +80,24 @@ module Collie
         def add_offense_for_declaration(ast, token_name, _location)
           # Find the declaration node
           decl = ast.declarations.find do |d|
-            d.is_a?(AST::TokenDeclaration) && d.names.include?(token_name)
+            token_declares?(d, token_name)
           end
 
           return unless decl
 
           add_offense(decl,
                       message: "Token '#{token_name}' is declared but never used")
+        end
+
+        def token_declares?(declaration, token_name)
+          case declaration
+          when AST::TokenDeclaration
+            declaration.names.include?(token_name)
+          when AST::PrecedenceDeclaration
+            declaration.tokens.include?(token_name)
+          else
+            false
+          end
         end
       end
     end

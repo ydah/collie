@@ -47,6 +47,22 @@ RSpec.describe Collie::Linter::Rules::SymbolConflict do
       expect(offenses.map(&:message).join("\n")).to include("Nonterminal 'expr' already defined")
     end
 
+    it "detects precedence token and nonterminal name conflicts" do
+      source = <<~GRAMMAR
+        %left expr
+        %%
+        expr
+            : %empty
+            ;
+        %%
+      GRAMMAR
+
+      ast = parse_grammar(source)
+      offenses = described_class.new.check(ast)
+
+      expect(offenses.map(&:message)).to include("Symbol 'expr' is declared as both token and nonterminal")
+    end
+
     it "allows distinct tokens and nonterminals" do
       source = <<~GRAMMAR
         %token NUMBER

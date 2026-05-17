@@ -28,11 +28,20 @@ module Collie
 
         def collect_tokens(ast)
           ast.declarations.each_with_object({}) do |decl, tokens|
-            next unless decl.is_a?(AST::TokenDeclaration)
-
-            decl.names.each do |name|
+            token_names(decl).each do |name|
               tokens[name] ||= Entry.new(name, decl.location)
             end
+          end
+        end
+
+        def token_names(declaration)
+          case declaration
+          when AST::TokenDeclaration
+            declaration.names
+          when AST::PrecedenceDeclaration
+            declaration.tokens
+          else
+            []
           end
         end
 

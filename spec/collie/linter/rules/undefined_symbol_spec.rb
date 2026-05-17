@@ -70,6 +70,24 @@ RSpec.describe Collie::Linter::Rules::UndefinedSymbol do
       expect(offenses).to be_empty
     end
 
+    it "allows tokens declared by precedence directives" do
+      source = <<~GRAMMAR
+        %left PLUS
+        %%
+        expr
+            : expr PLUS expr
+            | %empty
+            ;
+        %%
+      GRAMMAR
+
+      ast = parse_grammar(source)
+      rule = described_class.new
+      offenses = rule.check(ast)
+
+      expect(offenses).to be_empty
+    end
+
     it "allows parameterized rule calls declared in the declaration section" do
       source = <<~GRAMMAR
         %token NUMBER

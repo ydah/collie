@@ -150,6 +150,26 @@ RSpec.describe "CLI integration" do
       expect(output).to include("DuplicateToken")
       expect($CHILD_STATUS.exitstatus).to eq(1)
     end
+
+    it "treats precedence directives as token declarations" do
+      Tempfile.create(["test", ".y"]) do |f|
+        f.write(<<~GRAMMAR)
+          %left PLUS
+          %%
+          expr
+              : expr PLUS expr
+              | %empty
+              ;
+          %%
+        GRAMMAR
+        f.flush
+
+        output = `bundle exec exe/collie lint #{f.path} --only=UndefinedSymbol 2>&1`
+
+        expect(output).to include("No offenses detected").or include("✓")
+        expect($CHILD_STATUS.exitstatus).to eq(0), "Expected exit 0, got #{$CHILD_STATUS.exitstatus}. Output: #{output}"
+      end
+    end
   end
 
   describe "fmt command" do

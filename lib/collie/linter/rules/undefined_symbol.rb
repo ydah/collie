@@ -60,7 +60,13 @@ module Collie
           ast.declarations.each do |decl|
             case decl
             when AST::TokenDeclaration
-              decl.names.each { |name| table.add_token(name, type_tag: decl.type_tag, location: decl.location) }
+              decl.names.each do |name|
+                add_token(table, name, type_tag: decl.type_tag, location: decl.location)
+              end
+            when AST::PrecedenceDeclaration
+              decl.tokens.each do |name|
+                add_token(table, name, location: decl.location)
+              end
             when AST::ParameterizedRule
               table.add_nonterminal(decl.name, location: decl.location)
             when AST::InlineRule
@@ -73,6 +79,12 @@ module Collie
           end
 
           table
+        end
+
+        def add_token(table, name, type_tag: nil, location: nil)
+          table.add_token(name, type_tag: type_tag, location: location)
+        rescue Error
+          # Ignore duplicates while building the resolver table.
         end
       end
     end

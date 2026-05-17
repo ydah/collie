@@ -47,5 +47,40 @@ RSpec.describe Collie::Linter::Rules::UnusedToken do
 
       expect(offenses).to be_empty
     end
+
+    it "reports unused tokens declared by precedence directives" do
+      source = <<~GRAMMAR
+        %left PLUS
+        %%
+        start
+            : %empty
+            ;
+        %%
+      GRAMMAR
+
+      ast = parse_grammar(source)
+      rule = described_class.new
+      offenses = rule.check(ast)
+
+      expect(offenses.map(&:message)).to include("Token 'PLUS' is declared but never used")
+    end
+
+    it "treats %prec annotations as token usage" do
+      source = <<~GRAMMAR
+        %left UMINUS
+        %%
+        start
+            : MINUS start %prec UMINUS
+            | NUMBER
+            ;
+        %%
+      GRAMMAR
+
+      ast = parse_grammar(source)
+      rule = described_class.new
+      offenses = rule.check(ast)
+
+      expect(offenses).to be_empty
+    end
   end
 end
