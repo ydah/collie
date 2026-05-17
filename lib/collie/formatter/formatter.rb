@@ -169,7 +169,8 @@ module Collie
         declarations.map do |decl|
           params = decl.parameters.empty? ? "" : "(#{decl.parameters.join(', ')})"
           alternatives = decl.alternatives.map { |alt| format_alternative(alt) }.join(" | ")
-          "%rule #{decl.name}#{params}: #{alternatives} ;"
+          separator = alternatives.start_with?(" |") ? "" : " "
+          "%rule #{decl.name}#{params}:#{separator}#{alternatives} ;"
         end.join("\n")
       end
 

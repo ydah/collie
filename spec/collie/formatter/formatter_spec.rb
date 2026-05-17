@@ -173,6 +173,20 @@ RSpec.describe Collie::Formatter::Formatter do
       expect(output).not_to include("opt()")
     end
 
+    it "formats parameterized rule declarations with empty leading alternatives" do
+      source = <<~GRAMMAR
+        %rule opt: | ITEM ;
+        %%
+        %%
+      GRAMMAR
+
+      ast = parse_grammar(source)
+      output = formatter.format(ast)
+
+      expect(output).to include("%rule opt: | ITEM ;")
+      expect(output).not_to include("%rule opt:  | ITEM ;")
+    end
+
     it "keeps unknown declarations" do
       source = <<~GRAMMAR
         %define api.value.type {variant}
