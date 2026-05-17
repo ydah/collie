@@ -375,6 +375,7 @@ module Collie
         action = nil
         prec = nil
         explicit_empty = false
+        empty_marker = nil
         start_location = current_token.location
 
         until match?(:PIPE) || match?(:SEMICOLON) || match?(:ACTION) ||
@@ -385,6 +386,7 @@ module Collie
             advance
           elsif match?(:EMPTY)
             explicit_empty = true
+            empty_marker = token_value(current_token)
             advance
           elsif match?(:IDENTIFIER) || match?(:STRING) || match?(:CHAR)
             symbol_token = current_token
@@ -436,6 +438,7 @@ module Collie
           action: action,
           prec: prec,
           explicit_empty: explicit_empty,
+          empty_marker: empty_marker,
           location: symbols.first&.location || start_location
         )
       end

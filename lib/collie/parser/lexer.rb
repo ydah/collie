@@ -46,7 +46,8 @@ module Collie
           if current_char == "/" && peek_char == "/"
             skip_line_comment
           elsif current_char == "/" && peek_char == "*"
-            skip_block_comment
+            token = tokenize_block_comment
+            @tokens << token if token
           elsif current_char == "%" && peek_char == "{"
             @tokens << tokenize_prologue
           elsif current_char == "%" && peek_char == "}"
@@ -146,15 +147,34 @@ module Collie
         advance unless eof? # skip \n
       end
 
-      def skip_block_comment
+      def tokenize_block_comment
+        start_line = @line
+        start_column = @column
+        buffer = +"/*"
         advance(2) # skip /*
+
         until eof?
           if current_char == "*" && peek_char == "/"
+            buffer << "*/"
             advance(2)
             break
           end
+
+          buffer << current_char
           advance
         end
+
+        return unless empty_comment?(buffer)
+
+        Token.new(
+          type: :EMPTY,
+          value: buffer,
+          location: make_location(start_line, start_column, buffer.length)
+        )
+      end
+
+      def empty_comment?(comment)
+        comment.match?(%r{\A/\*\s*empty\s*\*/\z}i)
       end
 
       def tokenize_prologue

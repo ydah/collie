@@ -227,6 +227,26 @@ RSpec.describe Collie::Parser::Parser do
       expect(rule.alternatives.last.symbols.first.name).to eq("ITEM")
     end
 
+    it "parses empty comments as explicit empty alternatives" do
+      source = <<~GRAMMAR
+        %%
+        opt
+            : /* empty */
+            | ITEM
+            ;
+        %%
+      GRAMMAR
+
+      lexer = Collie::Parser::Lexer.new(source)
+      tokens = lexer.tokenize
+      parser = described_class.new(tokens)
+      ast = parser.parse
+
+      rule = ast.rules.first
+      expect(rule.alternatives.first.explicit_empty).to be true
+      expect(rule.alternatives.first.empty_marker).to eq("/* empty */")
+    end
+
     it "parses epilogue section" do
       source = <<~GRAMMAR
         %%

@@ -173,6 +173,23 @@ RSpec.describe Collie::Formatter::Formatter do
       expect(output).to include("| ITEM")
     end
 
+    it "preserves empty comment markers" do
+      source = <<~GRAMMAR
+        %%
+        opt
+            : /* empty */
+            | ITEM
+            ;
+        %%
+      GRAMMAR
+
+      ast = parse_grammar(source)
+      output = formatter.format(ast)
+
+      expect(output).to include(": /* empty */")
+      expect(output).to include("| ITEM")
+    end
+
     it "formats simple rules" do
       source = <<~GRAMMAR
         %%

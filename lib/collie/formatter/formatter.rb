@@ -208,7 +208,7 @@ module Collie
       end
 
       def format_alternative(alt)
-        symbols_str = alt.explicit_empty ? "%empty" : alt.symbols.map { |sym| format_symbol(sym) }.join(" ")
+        symbols_str = alt.explicit_empty ? (alt.empty_marker || "%empty") : alt.symbols.map { |sym| format_symbol(sym) }.join(" ")
         action_str = alt.action ? " #{alt.action.code}" : ""
         prec_str = alt.prec ? " %prec #{alt.prec}" : ""
 

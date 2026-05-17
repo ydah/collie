@@ -32,6 +32,15 @@ RSpec.describe Collie::Parser::Lexer do
       expect(tokens[0].type).to eq(:EMPTY)
     end
 
+    it "tokenizes empty comments as explicit empty alternatives" do
+      source = "/* empty */"
+      lexer = described_class.new(source)
+      tokens = lexer.tokenize
+
+      expect(tokens[0].type).to eq(:EMPTY)
+      expect(tokens[0].value).to eq("/* empty */")
+    end
+
     it "keeps unknown directive lines as a single token" do
       source = "%define api.value.type {variant}\n%%"
       lexer = described_class.new(source)

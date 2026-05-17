@@ -107,13 +107,14 @@ module Collie
 
     # Alternative production for a rule
     class Alternative
-      attr_accessor :symbols, :action, :prec, :explicit_empty, :location
+      attr_accessor :symbols, :action, :prec, :explicit_empty, :empty_marker, :location
 
-      def initialize(symbols: [], action: nil, prec: nil, explicit_empty: false, location: nil)
+      def initialize(symbols: [], action: nil, prec: nil, explicit_empty: false, empty_marker: nil, location: nil)
         @symbols = symbols
         @action = action
         @prec = prec
         @explicit_empty = explicit_empty
+        @empty_marker = empty_marker
         @location = location
       end
     end
