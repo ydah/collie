@@ -40,10 +40,13 @@ module Collie
           rule: offense.rule.rule_name,
           severity: offense.severity,
           message: offense.message,
+          autocorrectable: offense.autocorrectable?,
           location: {
             line: offense.location.line,
             column: offense.location.column,
-            length: offense.location.length
+            length: offense.location.length,
+            end_line: offense.location.line,
+            end_column: offense.location.column + offense.location.length
           }
         }
       end

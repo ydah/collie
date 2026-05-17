@@ -166,6 +166,25 @@ RSpec.describe "CLI integration" do
       expect(output).to include("UndefinedSymbol")
       expect(output).to include("TokenNaming")
     end
+
+    it "includes config-reflected metadata as JSON" do
+      Tempfile.create(["config", ".yml"]) do |f|
+        f.write(<<~YAML)
+          rules:
+            TokenNaming:
+              enabled: false
+              severity: error
+        YAML
+        f.flush
+
+        output = `bundle exec exe/collie rules --format json --config #{f.path} 2>&1`
+        data = JSON.parse(output)
+        token_naming = data.find { |rule| rule["name"] == "TokenNaming" }
+
+        expect(token_naming["enabled"]).to be false
+        expect(token_naming["severity"]).to eq("error")
+      end
+    end
   end
 
   describe "version command" do

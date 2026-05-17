@@ -86,16 +86,20 @@ module Collie
     end
 
     desc "rules", "List all available rules"
+    option :config, type: :string, desc: "Config file path"
     option :format, type: :string, default: "text", enum: %w[text json]
     def rules
+      config = Config.new(options[:config])
       Linter::Registry.load_rules
 
       if options[:format] == "json"
         output = Linter::Registry.all.map do |rule|
+          rule_config = config.rule_config(rule.rule_name)
           {
             name: rule.rule_name,
             description: rule.description,
-            severity: rule.severity,
+            enabled: config.rule_enabled?(rule.rule_name),
+            severity: configured_rule_severity(rule, rule_config),
             autocorrectable: rule.autocorrectable
           }
         end
@@ -103,9 +107,12 @@ module Collie
       else
         say "Available lint rules:", :bold
         Linter::Registry.all.each do |rule|
-          severity_color = severity_color(rule.severity)
+          rule_config = config.rule_config(rule.rule_name)
+          severity = configured_rule_severity(rule, rule_config)
+          severity_color = severity_color(severity)
           autocorrect = rule.autocorrectable ? " [autocorrectable]" : ""
-          say "  #{rule.rule_name} (#{set_color(rule.severity, severity_color)})#{autocorrect}"
+          enabled = config.rule_enabled?(rule.rule_name) ? "" : " [disabled]"
+          say "  #{rule.rule_name} (#{set_color(severity, severity_color)})#{autocorrect}#{enabled}"
           say "    #{rule.description}", :dim
         end
       end
@@ -299,6 +306,13 @@ module Collie
       end
     end
 
+    def configured_rule_severity(rule, rule_config)
+      configured = rule_config["severity"] || rule_config[:severity]
+      return rule.severity unless configured
+
+      configured.to_sym
+    end
+
     def severity_color(severity)
       case severity
       when :error then :red
@@ -310,18 +324,57 @@ module Collie
     end
 
     def show_diff(original, formatted)
-      require "tempfile"
+      puts unified_diff(original, formatted)
+    end
 
-      Tempfile.create(["original", ".y"]) do |orig|
-        Tempfile.create(["formatted", ".y"]) do |fmt|
-          orig.write(original)
-          orig.flush
-          fmt.write(formatted)
-          fmt.flush
+    def unified_diff(original, formatted)
+      original_lines = original.lines
+      formatted_lines = formatted.lines
+      prefix = common_prefix_length(original_lines, formatted_lines)
+      suffix = common_suffix_length(original_lines, formatted_lines, prefix)
 
-          system("diff", "-u", orig.path, fmt.path)
-        end
+      original_start = [prefix - 3, 0].max
+      formatted_start = [prefix - 3, 0].max
+      original_end = [original_lines.length - suffix + 3, original_lines.length].min
+      formatted_end = [formatted_lines.length - suffix + 3, formatted_lines.length].min
+
+      output = [
+        "--- original",
+        "+++ formatted",
+        "@@ -#{hunk_range(original_start, original_end)} +#{hunk_range(formatted_start, formatted_end)} @@"
+      ]
+
+      original_lines[original_start...prefix].each { |line| output << " #{line.chomp}" }
+      original_lines[prefix...(original_lines.length - suffix)].each { |line| output << "-#{line.chomp}" }
+      formatted_lines[prefix...(formatted_lines.length - suffix)].each { |line| output << "+#{line.chomp}" }
+      formatted_lines[(formatted_lines.length - suffix)...formatted_end].each { |line| output << " #{line.chomp}" }
+
+      output.join("\n")
+    end
+
+    def common_prefix_length(left, right)
+      index = 0
+      index += 1 while index < left.length && index < right.length && left[index] == right[index]
+      index
+    end
+
+    def common_suffix_length(left, right, prefix_length)
+      left_index = left.length - 1
+      right_index = right.length - 1
+      count = 0
+
+      while left_index >= prefix_length && right_index >= prefix_length && left[left_index] == right[right_index]
+        count += 1
+        left_index -= 1
+        right_index -= 1
       end
+
+      count
+    end
+
+    def hunk_range(start_index, end_index)
+      length = end_index - start_index
+      length == 1 ? (start_index + 1).to_s : "#{start_index + 1},#{length}"
     end
   end
 end

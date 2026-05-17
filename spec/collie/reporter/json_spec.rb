@@ -59,8 +59,11 @@ RSpec.describe Collie::Reporter::Json do
       expect(offense["rule"]).to eq("TestRule")
       expect(offense["severity"]).to eq("error")
       expect(offense["message"]).to eq("Test error")
+      expect(offense["autocorrectable"]).to be false
       expect(offense["location"]["line"]).to eq(10)
       expect(offense["location"]["column"]).to eq(5)
+      expect(offense["location"]["end_line"]).to eq(10)
+      expect(offense["location"]["end_column"]).to eq(8)
     end
   end
 end
