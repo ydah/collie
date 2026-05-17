@@ -33,6 +33,7 @@ module Collie
     def lint(*files)
       config = load_config
       Linter::Registry.load_rules
+      validate_rule_filters!
 
       return lint_stdin(config) if options[:stdin]
 
@@ -431,6 +432,16 @@ module Collie
 
     def rule_filter(option_name)
       Array(options[option_name]).flat_map { |value| value.split(",") }.map(&:strip).reject(&:empty?)
+    end
+
+    def validate_rule_filters!
+      unknown_rules = (rule_filter(:only) + rule_filter(:except)).uniq.reject do |rule_name|
+        Linter::Registry.find(rule_name)
+      end
+      return if unknown_rules.empty?
+
+      say "Unknown rule(s): #{unknown_rules.join(', ')}", :red
+      exit 1
     end
 
     def resolve_files(files, config)

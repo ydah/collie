@@ -142,6 +142,18 @@ RSpec.describe "CLI integration" do
       end
     end
 
+    it "exits with failure for unknown rule filters" do
+      Tempfile.create(["test", ".y"]) do |f|
+        f.write(valid_grammar_without_warnings)
+        f.flush
+
+        output = `bundle exec exe/collie lint --only=MissingRule #{f.path} 2>&1`
+
+        expect(output).to include("Unknown rule(s): MissingRule")
+        expect($CHILD_STATUS.exitstatus).to eq(1)
+      end
+    end
+
     it "uses fail-level to decide the exit status" do
       Tempfile.create(["test", ".y"]) do |f|
         f.write(<<~GRAMMAR)
