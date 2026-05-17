@@ -20,6 +20,23 @@ module Collie
             symbol_table.add_nonterminal(rule.name, location: rule.location)
           end
 
+          ast.declarations.each do |decl|
+            case decl
+            when AST::TokenDeclaration
+              decl.names.each do |name|
+                symbol_table.add_token(name, type_tag: decl.type_tag, location: decl.location)
+              rescue Error
+                # Ignore duplicates here; duplicate rules report them.
+              end
+            when AST::ParameterizedRule
+              symbol_table.add_nonterminal(decl.name, location: decl.location)
+            when AST::InlineRule
+              symbol_table.add_nonterminal(decl.rule, location: decl.location)
+            end
+          end
+
+          Analyzer::SymbolResolver.resolve(ast, symbol_table)
+
           # Find start symbol
           start_symbol = find_start_symbol(ast)
 

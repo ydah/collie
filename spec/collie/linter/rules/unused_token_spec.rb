@@ -30,5 +30,22 @@ RSpec.describe Collie::Linter::Rules::UnusedToken do
 
       expect(offenses).to be_empty
     end
+
+    it "treats lowercase declared tokens as token usage" do
+      source = <<~GRAMMAR
+        %token item
+        %%
+        start
+            : item
+            ;
+        %%
+      GRAMMAR
+
+      ast = parse_grammar(source)
+      rule = described_class.new
+      offenses = rule.check(ast)
+
+      expect(offenses).to be_empty
+    end
   end
 end

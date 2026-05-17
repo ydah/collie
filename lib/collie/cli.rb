@@ -165,6 +165,7 @@ module Collie
       ast = parse_source(source, filename: filename)
 
       symbol_table = build_symbol_table(ast)
+      Analyzer::SymbolResolver.resolve(ast, symbol_table)
       context = { symbol_table: symbol_table, source: source, file: filename }
 
       offenses = run_lint_rules(ast, context, config)

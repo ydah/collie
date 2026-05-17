@@ -14,6 +14,7 @@ module Collie
 
         def check(ast, context = {})
           symbol_table = context[:symbol_table] || build_symbol_table(ast)
+          Analyzer::SymbolResolver.resolve(ast, symbol_table)
 
           # Track token usage in normal rules
           ast.rules.each do |rule|
