@@ -152,10 +152,12 @@ module Collie
 
     # Lrama extension: Inline rule
     class InlineRule
-      attr_accessor :rule, :location
+      attr_accessor :rule, :parameters, :alternatives, :location
 
-      def initialize(rule:, location: nil)
+      def initialize(rule:, parameters: [], alternatives: [], location: nil)
         @rule = rule
+        @parameters = parameters
+        @alternatives = alternatives
         @location = location
       end
     end

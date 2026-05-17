@@ -127,12 +127,35 @@ module Collie
       end
 
       def parse_inline_declaration
-        # %inline followed by rule name
-        rule_name = expect(:IDENTIFIER).value
+        # %inline followed by a rule name, optionally with a full inline rule body.
+        rule_token = expect(:IDENTIFIER)
+        rule_name = rule_token.value
+        parameters = []
+        alternatives = []
+
+        if match?(:LPAREN)
+          advance
+          parameters = parse_parameter_list
+          expect(:RPAREN)
+        end
+
+        if match?(:COLON)
+          advance
+          alternatives << parse_alternative
+
+          while match?(:PIPE)
+            advance
+            alternatives << parse_alternative
+          end
+
+          expect(:SEMICOLON) if match?(:SEMICOLON)
+        end
 
         AST::InlineRule.new(
           rule: rule_name,
-          location: current_token.location
+          parameters: parameters,
+          alternatives: alternatives,
+          location: rule_token.location
         )
       end
 
@@ -147,7 +170,7 @@ module Collie
         end
 
         while match?(:IDENTIFIER) || match?(:STRING) || match?(:CHAR)
-          names << current_token.value
+          names << token_value(current_token)
           advance
         end
 
@@ -191,7 +214,7 @@ module Collie
 
         tokens = []
         while match?(:IDENTIFIER) || match?(:STRING) || match?(:CHAR)
-          tokens << current_token.value
+          tokens << token_value(current_token)
           advance
         end
 
@@ -300,7 +323,8 @@ module Collie
 
         if match?(:IDENTIFIER) || match?(:STRING) || match?(:CHAR)
           symbol_token = current_token
-          kind = if symbol_token.value.match?(/^[A-Z]/) || match?(:STRING) || match?(:CHAR)
+          name = token_value(symbol_token)
+          kind = if name.match?(/^[A-Z]/) || literal_token?(symbol_token)
                    :terminal
                  else
                    :nonterminal
@@ -308,7 +332,7 @@ module Collie
           advance
 
           args << AST::Symbol.new(
-            name: symbol_token.value,
+            name: name,
             kind: kind,
             location: symbol_token.location
           )
@@ -316,7 +340,8 @@ module Collie
           while match?(:COMMA)
             advance
             symbol_token = current_token
-            kind = if symbol_token.value.match?(/^[A-Z]/) || match?(:STRING) || match?(:CHAR)
+            name = token_value(symbol_token)
+            kind = if name.match?(/^[A-Z]/) || literal_token?(symbol_token)
                      :terminal
                    else
                      :nonterminal
@@ -324,7 +349,7 @@ module Collie
             advance
 
             args << AST::Symbol.new(
-              name: symbol_token.value,
+              name: name,
               kind: kind,
               location: symbol_token.location
             )
@@ -344,11 +369,12 @@ module Collie
               match?(:SECTION_SEPARATOR) || match?(:EOF)
           if match?(:PREC)
             advance
-            prec = current_token.value
+            prec = token_value(current_token)
             advance
           elsif match?(:IDENTIFIER) || match?(:STRING) || match?(:CHAR)
             symbol_token = current_token
-            kind = if symbol_token.value.match?(/^[A-Z]/) || match?(:STRING) || match?(:CHAR)
+            name = token_value(symbol_token)
+            kind = if name.match?(/^[A-Z]/) || literal_token?(symbol_token)
                      :terminal
                    else
                      :nonterminal
@@ -371,7 +397,7 @@ module Collie
             end
 
             symbols << AST::Symbol.new(
-              name: symbol_token.value,
+              name: name,
               kind: kind,
               alias_name: alias_name,
               arguments: arguments,
@@ -405,11 +431,19 @@ module Collie
         code = +""
 
         until match?(:EOF)
-          code << current_token.value
+          code << token_value(current_token)
           advance
         end
 
         AST::Epilogue.new(code: code, location: current_token.location) unless code.empty?
+      end
+
+      def token_value(token)
+        token.raw_value || token.value
+      end
+
+      def literal_token?(token)
+        token.type == :STRING || token.type == :CHAR
       end
     end
   end

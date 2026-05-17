@@ -23,6 +23,22 @@ RSpec.describe Collie::Formatter::Formatter do
       expect(options.align_tokens).to be false
     end
 
+    it "uses configured indentation for rule bodies" do
+      source = <<~GRAMMAR
+        %%
+        expr
+            : NUMBER
+            ;
+        %%
+      GRAMMAR
+
+      ast = parse_grammar(source)
+      formatter = described_class.new(Collie::Formatter::Options.new("indent_size" => 4))
+      output = formatter.format(ast)
+
+      expect(output).to include("    : NUMBER")
+    end
+
     it "formats token declarations" do
       source = <<~GRAMMAR
         %token NUMBER IDENTIFIER
@@ -65,6 +81,51 @@ RSpec.describe Collie::Formatter::Formatter do
 
       expect(output).to include("%left")
       expect(output).to include("%right")
+    end
+
+    it "preserves literal spelling in declarations and rules" do
+      source = <<~GRAMMAR
+        %token '+'
+        %left "++"
+        %%
+        expr
+            : expr '+' expr
+            ;
+        %%
+      GRAMMAR
+
+      ast = parse_grammar(source)
+      output = formatter.format(ast)
+
+      expect(output).to include("%token '+'")
+      expect(output).to include('"++"')
+      expect(output).to include("expr '+' expr")
+    end
+
+    it "formats union declarations" do
+      source = <<~GRAMMAR
+        %union { int number; }
+        %%
+        %%
+      GRAMMAR
+
+      ast = parse_grammar(source)
+      output = formatter.format(ast)
+
+      expect(output).to include("%union { int number; }")
+    end
+
+    it "formats inline rule declarations with bodies" do
+      source = <<~GRAMMAR
+        %inline opt(X): | X ;
+        %%
+        %%
+      GRAMMAR
+
+      ast = parse_grammar(source)
+      output = formatter.format(ast)
+
+      expect(output).to include("%inline opt(X): | X ;")
     end
 
     it "formats simple rules" do

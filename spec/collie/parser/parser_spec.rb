@@ -53,6 +53,27 @@ RSpec.describe Collie::Parser::Parser do
       expect(ast.declarations[1].type_tag).to eq("node")
     end
 
+    it "preserves literal spelling in token declarations and rules" do
+      source = <<~GRAMMAR
+        %token '+'
+        %left "++"
+        %%
+        expr
+            : expr '+' expr
+            ;
+        %%
+      GRAMMAR
+
+      lexer = Collie::Parser::Lexer.new(source)
+      tokens = lexer.tokenize
+      parser = described_class.new(tokens)
+      ast = parser.parse
+
+      expect(ast.declarations[0].names).to eq(["'+'"])
+      expect(ast.declarations[1].tokens).to eq(['"++"'])
+      expect(ast.rules.first.alternatives.first.symbols[1].name).to eq("'+'")
+    end
+
     it "parses type declarations" do
       source = <<~GRAMMAR
         %type <node> expr stmt

@@ -13,23 +13,24 @@ module Collie
 
         # Prologue
         output << format_prologue(ast.prologue) if ast.prologue
+        append_blank_lines(output) if ast.prologue
 
         # Declarations
         output << format_declarations(ast.declarations) unless ast.declarations.empty?
+        append_blank_lines(output) unless ast.declarations.empty?
 
         # Section separator
-        output << ""
         output << "%%"
-        output << ""
+        append_blank_lines(output)
 
         # Rules
-        output << format_rules(ast.rules)
+        output << format_rules(ast.rules) unless ast.rules.empty?
 
         # Epilogue
         if ast.epilogue
-          output << ""
+          append_blank_lines(output)
           output << "%%"
-          output << ""
+          append_blank_lines(output)
           output << ast.epilogue.code
         end
 
@@ -61,6 +62,12 @@ module Collie
         # Format precedence declarations
         if grouped[AST::PrecedenceDeclaration]
           output << format_precedence_declarations(grouped[AST::PrecedenceDeclaration])
+          output << ""
+        end
+
+        # Format union declarations
+        if grouped[AST::UnionDeclaration]
+          output << format_union_declarations(grouped[AST::UnionDeclaration])
           output << ""
         end
 
@@ -98,7 +105,11 @@ module Collie
         max_tag_length = declarations.map { |d| d.type_tag ? d.type_tag.length + 2 : 0 }.max || 0
         declarations.map do |decl|
           tag = decl.type_tag ? "<#{decl.type_tag}>" : ""
-          "%token #{tag.ljust(max_tag_length)} #{decl.names.join(' ')}"
+          if tag.empty?
+            "%token #{decl.names.join(' ')}"
+          else
+            "%token #{tag.ljust(max_tag_length)} #{decl.names.join(' ')}"
+          end
         end.join("\n")
       end
 
@@ -133,6 +144,13 @@ module Collie
         end.join("\n")
       end
 
+      def format_union_declarations(declarations)
+        declarations.map do |decl|
+          body = decl.body.to_s
+          body.start_with?("{") ? "%union #{body}" : "%union {#{body}}"
+        end.join("\n")
+      end
+
       def format_parameterized_rule_declarations(declarations)
         declarations.map do |decl|
           params = "(#{decl.parameters.join(', ')})"
@@ -143,7 +161,14 @@ module Collie
 
       def format_inline_rule_declarations(declarations)
         declarations.map do |decl|
-          "%inline #{decl.rule}"
+          output = "%inline #{decl.rule}"
+          output += "(#{decl.parameters.join(', ')})" unless decl.parameters.empty?
+          unless decl.alternatives.empty?
+            alternatives = decl.alternatives.map { |alt| format_alternative(alt) }.join(" | ")
+            separator = alternatives.start_with?(" |") ? "" : " "
+            output += ":#{separator}#{alternatives} ;"
+          end
+          output
         end.join("\n")
       end
 
@@ -159,13 +184,14 @@ module Collie
         end
 
         output = [rule_header]
+        indent = @options.indent
 
         rule.alternatives.each_with_index do |alt, index|
-          prefix = index.zero? ? "    :" : "    |"
+          prefix = index.zero? ? "#{indent}:" : "#{indent}|"
           output << "#{prefix} #{format_alternative(alt)}"
         end
 
-        output << "    ;"
+        output << "#{indent};"
         output.join("\n")
       end
 
@@ -190,6 +216,10 @@ module Collie
         end
 
         result
+      end
+
+      def append_blank_lines(output)
+        @options.blank_lines_around_sections.times { output << "" }
       end
     end
   end

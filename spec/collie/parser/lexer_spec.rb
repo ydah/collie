@@ -40,6 +40,25 @@ RSpec.describe Collie::Parser::Lexer do
 
       expect(tokens[0].type).to eq(:STRING)
       expect(tokens[0].value).to eq("++")
+      expect(tokens[0].raw_value).to eq('"++"')
+    end
+
+    it "keeps braces inside action strings from closing the action" do
+      source = '{ puts "}"; }'
+      lexer = described_class.new(source)
+      tokens = lexer.tokenize
+
+      expect(tokens[0].type).to eq(:ACTION)
+      expect(tokens[0].value).to eq('{ puts "}"; }')
+    end
+
+    it "keeps braces inside action comments from closing the action" do
+      source = "{ /* } */ puts 1; }"
+      lexer = described_class.new(source)
+      tokens = lexer.tokenize
+
+      expect(tokens[0].type).to eq(:ACTION)
+      expect(tokens[0].value).to eq("{ /* } */ puts 1; }")
     end
   end
 end

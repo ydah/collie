@@ -6,12 +6,13 @@ module Collie
   module Parser
     # Token representation
     class Token
-      attr_accessor :type, :value, :location
+      attr_accessor :type, :value, :location, :raw_value
 
-      def initialize(type:, value:, location:)
+      def initialize(type:, value:, location:, raw_value: nil)
         @type = type
         @value = value
         @location = location
+        @raw_value = raw_value
       end
 
       def to_s
@@ -209,7 +210,16 @@ module Collie
         loop do
           break if eof?
 
-          if current_char == "{"
+          if current_char == '"' || current_char == "'"
+            append_quoted_action_content(buffer, current_char)
+            next
+          elsif current_char == "/" && peek_char == "/"
+            append_line_comment_action_content(buffer)
+            next
+          elsif current_char == "/" && peek_char == "*"
+            append_block_comment_action_content(buffer)
+            next
+          elsif current_char == "{"
             depth += 1
           elsif current_char == "}"
             depth -= 1
@@ -232,6 +242,7 @@ module Collie
       end
 
       def tokenize_char_literal
+        start_pos = @pos
         start_line = @line
         start_column = @column
         buffer = +""
@@ -247,15 +258,18 @@ module Collie
         end
 
         advance unless eof? # skip closing '
+        raw_value = @source[start_pos...@pos]
 
         Token.new(
           type: :CHAR,
           value: buffer,
-          location: make_location(start_line, start_column, buffer.length + 2)
+          raw_value: raw_value,
+          location: make_location(start_line, start_column, raw_value.length)
         )
       end
 
       def tokenize_string_literal
+        start_pos = @pos
         start_line = @line
         start_column = @column
         buffer = +""
@@ -271,12 +285,67 @@ module Collie
         end
 
         advance unless eof? # skip closing "
+        raw_value = @source[start_pos...@pos]
 
         Token.new(
           type: :STRING,
           value: buffer,
-          location: make_location(start_line, start_column, buffer.length + 2)
+          raw_value: raw_value,
+          location: make_location(start_line, start_column, raw_value.length)
         )
+      end
+
+      def append_quoted_action_content(buffer, quote)
+        buffer << current_char
+        advance
+
+        until eof?
+          buffer << current_char
+
+          if current_char == "\\"
+            advance
+            next if eof?
+
+            buffer << current_char
+          elsif current_char == quote
+            advance
+            break
+          end
+
+          advance
+        end
+      end
+
+      def append_line_comment_action_content(buffer)
+        buffer << current_char
+        advance
+        buffer << current_char
+        advance
+
+        until eof? || current_char == "\n"
+          buffer << current_char
+          advance
+        end
+      end
+
+      def append_block_comment_action_content(buffer)
+        buffer << current_char
+        advance
+        buffer << current_char
+        advance
+
+        until eof?
+          if current_char == "*" && peek_char == "/"
+            buffer << current_char
+            advance
+            buffer << current_char
+            advance
+            break
+          end
+
+          buffer << current_char
+          advance
+        end
       end
 
       def tokenize_type_tag

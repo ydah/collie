@@ -109,6 +109,26 @@ RSpec.describe "Lrama extensions parsing" do
       expect(decl).to be_a(Collie::AST::InlineRule)
       expect(decl.rule).to eq("opt")
     end
+
+    it "parses %inline declaration with parameters and alternatives" do
+      source = <<~GRAMMAR
+        %inline opt(X): | X ;
+        %%
+        %%
+      GRAMMAR
+
+      lexer = Collie::Parser::Lexer.new(source)
+      tokens = lexer.tokenize
+      parser = Collie::Parser::Parser.new(tokens)
+      ast = parser.parse
+
+      decl = ast.declarations.first
+      expect(decl).to be_a(Collie::AST::InlineRule)
+      expect(decl.rule).to eq("opt")
+      expect(decl.parameters).to eq(["X"])
+      expect(decl.alternatives.length).to eq(2)
+      expect(decl.alternatives.last.symbols.first.name).to eq("X")
+    end
   end
 
   describe "complete Lrama grammar" do
