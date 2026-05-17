@@ -66,6 +66,20 @@ RSpec.describe Collie::Linter::Rules::AmbiguousPrecedence do
       expect(offenses).to be_empty
     end
 
+    it "allows alternatives with explicit %prec override" do
+      symbols = [
+        Collie::AST::Symbol.new(name: "expr", kind: :nonterminal, location: nil),
+        Collie::AST::Symbol.new(name: "-", kind: :terminal, location: nil),
+        Collie::AST::Symbol.new(name: "expr", kind: :nonterminal, location: nil)
+      ]
+      alternative = Collie::AST::Alternative.new(symbols: symbols, prec: "UMINUS", location: nil)
+      grammar_rule = Collie::AST::Rule.new(name: "expr", alternatives: [alternative], location: nil)
+      grammar = Collie::AST::GrammarFile.new(rules: [grammar_rule], declarations: [])
+
+      offenses = rule.check(grammar)
+      expect(offenses).to be_empty
+    end
+
     it "detects multiple operators without precedence" do
       grammar = create_grammar(
         rules_data: {

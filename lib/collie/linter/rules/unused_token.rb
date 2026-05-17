@@ -18,20 +18,16 @@ module Collie
           # Track token usage in normal rules
           ast.rules.each do |rule|
             rule.alternatives.each do |alt|
-              alt.symbols.each do |symbol|
-                symbol_table.use_token(symbol.name) if symbol.terminal?
-              end
+              alt.symbols.each { |symbol| mark_token_usage(symbol_table, symbol) }
             end
           end
 
           # Track token usage in parameterized rules (%rule)
           ast.declarations.each do |decl|
-            next unless decl.is_a?(AST::ParameterizedRule)
+            next unless decl.is_a?(AST::ParameterizedRule) || decl.is_a?(AST::InlineRule)
 
             decl.alternatives.each do |alt|
-              alt.symbols.each do |symbol|
-                symbol_table.use_token(symbol.name) if symbol.terminal?
-              end
+              alt.symbols.each { |symbol| mark_token_usage(symbol_table, symbol) }
             end
           end
 
@@ -45,6 +41,11 @@ module Collie
         end
 
         private
+
+        def mark_token_usage(symbol_table, symbol)
+          symbol_table.use_token(symbol.name) if symbol.terminal?
+          symbol.arguments&.each { |argument| mark_token_usage(symbol_table, argument) }
+        end
 
         def build_symbol_table(ast)
           table = Analyzer::SymbolTable.new

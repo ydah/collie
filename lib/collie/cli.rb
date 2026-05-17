@@ -157,6 +157,8 @@ module Collie
           end
         when AST::ParameterizedRule
           symbol_table.add_nonterminal(decl.name, location: decl.location)
+        when AST::InlineRule
+          symbol_table.add_nonterminal(decl.rule, location: decl.location)
         end
       end
 

@@ -55,6 +55,8 @@ module Collie
 
           ast.rules.each do |rule|
             rule.alternatives.each do |alt|
+              next if alt.prec
+
               alt.symbols.each do |symbol|
                 next unless symbol.terminal?
                 next unless looks_like_operator?(symbol.name)

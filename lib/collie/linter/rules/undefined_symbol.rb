@@ -17,12 +17,7 @@ module Collie
 
           ast.rules.each do |rule|
             rule.alternatives.each do |alt|
-              alt.symbols.each do |symbol|
-                next if symbol_table.declared?(symbol.name)
-
-                add_offense(symbol,
-                            message: "Undefined symbol '#{symbol.name}'")
-              end
+              alt.symbols.each { |symbol| check_symbol(symbol_table, symbol) }
             end
           end
 
@@ -31,6 +26,15 @@ module Collie
 
         private
 
+        def check_symbol(symbol_table, symbol)
+          unless symbol_table.declared?(symbol.name)
+            add_offense(symbol,
+                        message: "Undefined symbol '#{symbol.name}'")
+          end
+
+          symbol.arguments&.each { |argument| check_symbol(symbol_table, argument) }
+        end
+
         def build_symbol_table(ast)
           table = Analyzer::SymbolTable.new
 
@@ -38,6 +42,10 @@ module Collie
             case decl
             when AST::TokenDeclaration
               decl.names.each { |name| table.add_token(name, type_tag: decl.type_tag, location: decl.location) }
+            when AST::ParameterizedRule
+              table.add_nonterminal(decl.name, location: decl.location)
+            when AST::InlineRule
+              table.add_nonterminal(decl.rule, location: decl.location)
             end
           end
 

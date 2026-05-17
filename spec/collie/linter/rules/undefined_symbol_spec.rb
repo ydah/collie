@@ -69,5 +69,43 @@ RSpec.describe Collie::Linter::Rules::UndefinedSymbol do
 
       expect(offenses).to be_empty
     end
+
+    it "allows parameterized rule calls declared in the declaration section" do
+      source = <<~GRAMMAR
+        %token NUMBER
+        %rule list(X): X ;
+        %%
+        start
+            : list(expr)
+            ;
+        expr
+            : NUMBER
+            ;
+        %%
+      GRAMMAR
+
+      ast = parse_grammar(source)
+      rule = described_class.new
+      offenses = rule.check(ast)
+
+      expect(offenses).to be_empty
+    end
+
+    it "checks parameterized call arguments" do
+      source = <<~GRAMMAR
+        %rule list(X): X ;
+        %%
+        start
+            : list(missing)
+            ;
+        %%
+      GRAMMAR
+
+      ast = parse_grammar(source)
+      rule = described_class.new
+      offenses = rule.check(ast)
+
+      expect(offenses.map(&:message)).to include("Undefined symbol 'missing'")
+    end
   end
 end

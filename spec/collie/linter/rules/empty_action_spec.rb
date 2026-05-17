@@ -18,6 +18,13 @@ RSpec.describe Collie::Linter::Rules::EmptyAction do
     Collie::AST::GrammarFile.new(rules: [grammar_rule], declarations: [])
   end
 
+  def parse_grammar(source)
+    lexer = Collie::Parser::Lexer.new(source, filename: "test.y")
+    tokens = lexer.tokenize
+    parser = Collie::Parser::Parser.new(tokens)
+    parser.parse
+  end
+
   describe "#check" do
     it "detects empty action" do
       grammar = create_grammar_with_action("")
@@ -29,6 +36,13 @@ RSpec.describe Collie::Linter::Rules::EmptyAction do
 
     it "detects whitespace-only action" do
       grammar = create_grammar_with_action("   \n  \t  ")
+
+      offenses = rule.check(grammar)
+      expect(offenses).not_to be_empty
+    end
+
+    it "detects brace-wrapped empty action" do
+      grammar = create_grammar_with_action("{   }")
 
       offenses = rule.check(grammar)
       expect(offenses).not_to be_empty
@@ -58,6 +72,25 @@ RSpec.describe Collie::Linter::Rules::EmptyAction do
       offenses = rule.check(grammar)
 
       expect(offenses.first.autocorrectable?).to be true
+    end
+
+    it "autocorrects source-backed empty actions" do
+      source = <<~GRAMMAR
+        %%
+        expr
+            : NUMBER {   }
+            ;
+        %%
+      GRAMMAR
+
+      grammar = parse_grammar(source)
+      context = { source: source.dup, file: "test.y" }
+      offenses = rule.check(grammar, context)
+
+      offenses.first.autocorrect.call
+
+      expect(context[:source]).not_to include("{   }")
+      expect(grammar.rules.first.alternatives.first.action).to be_nil
     end
   end
 end
