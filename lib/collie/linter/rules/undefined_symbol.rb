@@ -21,10 +21,29 @@ module Collie
             end
           end
 
+          check_declarations(ast, symbol_table)
+
           @offenses
         end
 
         private
+
+        def check_declarations(ast, symbol_table)
+          ast.declarations.each do |decl|
+            case decl
+            when AST::StartDeclaration
+              next if symbol_table.nonterminal?(decl.symbol)
+
+              add_offense(decl, message: "Undefined start symbol '#{decl.symbol}'")
+            when AST::TypeDeclaration
+              decl.names.each do |name|
+                next if symbol_table.declared?(name)
+
+                add_offense(decl, message: "%type references undefined symbol '#{name}'")
+              end
+            end
+          end
+        end
 
         def check_symbol(symbol_table, symbol)
           unless symbol_table.declared?(symbol.name)
