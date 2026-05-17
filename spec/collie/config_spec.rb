@@ -85,6 +85,26 @@ RSpec.describe Collie::Config do
         expect(opts["align_tokens"]).to be false
       end
     end
+
+    it "treats empty config files as default config" do
+      Tempfile.create(["config", ".yml"]) do |f|
+        f.write("")
+        f.flush
+
+        config = described_class.new(f.path)
+
+        expect(config.formatter_options["indent_size"]).to eq(2)
+      end
+    end
+
+    it "rejects non-mapping config files" do
+      Tempfile.create(["config", ".yml"]) do |f|
+        f.write("- invalid\n")
+        f.flush
+
+        expect { described_class.new(f.path) }.to raise_error(Collie::Error, /YAML mapping/)
+      end
+    end
   end
 
   describe "#included_patterns" do

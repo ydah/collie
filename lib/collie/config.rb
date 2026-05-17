@@ -59,23 +59,25 @@ module Collie
 
     def load_config(config_path)
       config = DEFAULT_CONFIG.dup
+      path = config_path if config_path && File.exist?(config_path)
+      path ||= ".collie.yml" if File.exist?(".collie.yml")
+      return config unless path
 
-      if config_path && File.exist?(config_path)
-        user_config = YAML.load_file(config_path)
-        config = deep_merge(config, user_config)
+      user_config = load_yaml_config(path)
 
-        # Handle inheritance
-        if user_config["inherit_from"]
-          parent_path = File.expand_path(user_config["inherit_from"], File.dirname(config_path))
-          parent_config = YAML.load_file(parent_path) if File.exist?(parent_path)
-          config = deep_merge(parent_config, config) if parent_config
-        end
-      elsif File.exist?(".collie.yml")
-        user_config = YAML.load_file(".collie.yml")
-        config = deep_merge(config, user_config)
+      if user_config["inherit_from"]
+        parent_path = File.expand_path(user_config["inherit_from"], File.dirname(path))
+        config = deep_merge(config, load_yaml_config(parent_path)) if File.exist?(parent_path)
       end
 
-      config
+      deep_merge(config, user_config)
+    end
+
+    def load_yaml_config(path)
+      loaded = YAML.safe_load(File.read(path), aliases: true) || {}
+      raise Error, "Config file must contain a YAML mapping: #{path}" unless loaded.is_a?(Hash)
+
+      loaded
     end
 
     def deep_merge(hash1, hash2)
