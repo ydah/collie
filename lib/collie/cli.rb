@@ -24,8 +24,8 @@ module Collie
     option :config, type: :string, desc: "Config file path"
     option :format, type: :string, default: "text", enum: %w[text json github sarif], desc: "Output format"
     option :autocorrect, type: :boolean, aliases: "-a", desc: "Auto-fix offenses"
-    option :only, type: :array, desc: "Run only specified rules"
-    option :except, type: :array, desc: "Exclude specified rules"
+    option :only, type: :string, repeatable: true, desc: "Run only specified rules"
+    option :except, type: :string, repeatable: true, desc: "Exclude specified rules"
     option :fail_level, type: :string, default: "error", enum: %w[error warning convention info],
                         desc: "Minimum severity that exits with failure"
     option :stdin, type: :boolean, desc: "Read source from standard input"

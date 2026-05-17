@@ -94,6 +94,42 @@ RSpec.describe "CLI integration" do
       end
     end
 
+    it "supports repeated --only rule names" do
+      Tempfile.create(["test", ".y"]) do |f|
+        f.write(<<~GRAMMAR)
+          %token lowercase lowercase
+          %%
+          %%
+        GRAMMAR
+        f.flush
+
+        output = `bundle exec exe/collie lint #{f.path} --only DuplicateToken --only TokenNaming 2>&1`
+
+        expect(output).to include("DuplicateToken")
+        expect(output).to include("TokenNaming")
+        expect($CHILD_STATUS.exitstatus).to eq(1)
+      end
+    end
+
+    it "does not consume positional files as --only values" do
+      Tempfile.create(["test", ".y"]) do |f|
+        f.write(<<~GRAMMAR)
+          %%
+          start
+              : UNDEFINED_LOCAL
+              ;
+          %%
+        GRAMMAR
+        f.flush
+
+        output = `bundle exec exe/collie lint --only=UndefinedSymbol #{f.path} 2>&1`
+
+        expect(output).to include("UNDEFINED_LOCAL")
+        expect(output).not_to include("UNDEFINED_SYMBOL")
+        expect($CHILD_STATUS.exitstatus).to eq(1)
+      end
+    end
+
     it "uses fail-level to decide the exit status" do
       Tempfile.create(["test", ".y"]) do |f|
         f.write(<<~GRAMMAR)
