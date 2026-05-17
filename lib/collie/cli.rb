@@ -17,31 +17,41 @@ module Collie
     option :autocorrect, type: :boolean, aliases: "-a", desc: "Auto-fix offenses"
     option :only, type: :array, desc: "Run only specified rules"
     option :except, type: :array, desc: "Exclude specified rules"
+    option :fail_level, type: :string, default: "error", enum: %w[error warning convention info],
+                        desc: "Minimum severity that exits with failure"
     def lint(*files)
-      if files.empty?
-        say "No files specified", :red
-        exit 1
-      end
-
       config = Config.new(options[:config])
       Linter::Registry.load_rules
 
+      files = resolve_files(files, config)
+      if files.empty?
+        say "No files matched", :red
+        exit 1
+      end
+
       all_offenses = []
+      failed = false
 
       files.each do |file|
         unless File.exist?(file)
           say "File not found: #{file}", :red
+          failed = true
           next
         end
 
         offenses = lint_file(file, config)
+        unless offenses
+          failed = true
+          next
+        end
+
         all_offenses.concat(offenses)
       end
 
       reporter = create_reporter(options[:format])
       puts reporter.report(all_offenses)
 
-      exit 1 if all_offenses.any? { |o| o.severity == :error }
+      exit 1 if failed || fail_level_reached?(all_offenses)
     end
 
     desc "fmt FILES", "Format grammar files"
@@ -49,22 +59,30 @@ module Collie
     option :diff, type: :boolean, desc: "Show diff"
     option :config, type: :string, desc: "Config file path"
     def fmt(*files)
+      config = Config.new(options[:config])
+      files = resolve_files(files, config)
       if files.empty?
-        say "No files specified", :red
+        say "No files matched", :red
         exit 1
       end
 
-      config = Config.new(options[:config])
       formatter = Formatter::Formatter.new(Formatter::Options.new(config.formatter_options))
+      failed = false
+      changed = false
 
       files.each do |file|
         unless File.exist?(file)
           say "File not found: #{file}", :red
+          failed = true
           next
         end
 
-        format_file(file, formatter, check: options[:check], diff: options[:diff])
+        result = format_file(file, formatter, check: options[:check], diff: options[:diff])
+        failed = true if result == :failed
+        changed = true if result == :changed
       end
+
+      exit 1 if failed || changed
     end
 
     desc "rules", "List all available rules"
@@ -124,7 +142,7 @@ module Collie
       offenses
     rescue Error => e
       say "Error parsing #{file}: #{e.message}", :red
-      []
+      nil
     end
 
     def build_symbol_table(ast)
@@ -188,26 +206,82 @@ module Collie
       if check
         if source == formatted
           say "#{file}: OK", :green
+          :ok
         else
           say "#{file}: needs formatting", :yellow
           show_diff(source, formatted) if diff
+          :changed
+        end
+      elsif diff
+        if source == formatted
+          say "#{file}: OK", :green
+          :ok
+        else
+          say "#{file}: needs formatting", :yellow
+          show_diff(source, formatted)
+          :changed
         end
       else
         File.write(file, formatted)
         say "Formatted #{file}", :green
+        :ok
       end
     rescue Error => e
       say "Error formatting #{file}: #{e.message}", :red
+      :failed
     end
 
     def filter_rules(rules)
       filtered = rules
 
-      filtered = filtered.select { |r| options[:only].include?(r.rule_name) } if options[:only]
+      only = rule_filter(:only)
+      except = rule_filter(:except)
 
-      filtered = filtered.reject { |r| options[:except].include?(r.rule_name) } if options[:except]
+      filtered = filtered.select { |r| only.include?(r.rule_name) } if only.any?
+
+      filtered = filtered.reject { |r| except.include?(r.rule_name) } if except.any?
 
       filtered
+    end
+
+    def rule_filter(option_name)
+      Array(options[option_name]).flat_map { |value| value.split(",") }.map(&:strip).reject(&:empty?)
+    end
+
+    def resolve_files(files, config)
+      targets = files.empty? ? config.included_patterns : files
+      resolved = targets.flat_map { |target| expand_target(target) }.uniq
+      return resolved unless files.empty?
+
+      resolved.reject { |file| excluded?(file, config.excluded_patterns) }
+    end
+
+    def expand_target(target)
+      return Dir.glob(target).select { |path| File.file?(path) } if glob_pattern?(target)
+
+      [target]
+    end
+
+    def glob_pattern?(target)
+      target.match?(/[*?\[\]{}]/)
+    end
+
+    def excluded?(file, patterns)
+      patterns.any? { |pattern| File.fnmatch?(pattern, file, File::FNM_PATHNAME | File::FNM_EXTGLOB) }
+    end
+
+    def fail_level_reached?(offenses)
+      threshold = severity_rank(options[:fail_level].to_sym)
+      offenses.any? { |offense| severity_rank(offense.severity) >= threshold }
+    end
+
+    def severity_rank(severity)
+      {
+        info: 0,
+        convention: 1,
+        warning: 2,
+        error: 3
+      }.fetch(severity, 3)
     end
 
     def create_reporter(format)

@@ -70,6 +70,45 @@ RSpec.describe "CLI integration" do
         expect(corrected_content).not_to match(/[ \t]+\n/)
       end
     end
+
+    it "exits with failure for missing files" do
+      output = `bundle exec exe/collie lint /tmp/collie-missing-file.y 2>&1`
+
+      expect(output).to include("File not found")
+      expect($CHILD_STATUS.exitstatus).to eq(1)
+    end
+
+    it "supports comma-separated --only rule names" do
+      Tempfile.create(["test", ".y"]) do |f|
+        f.write(<<~GRAMMAR)
+          %token NUMBER NUMBER
+          %%
+          %%
+        GRAMMAR
+        f.flush
+
+        output = `bundle exec exe/collie lint --only=DuplicateToken,TokenNaming #{f.path} 2>&1`
+
+        expect(output).to include("DuplicateToken")
+        expect($CHILD_STATUS.exitstatus).to eq(1)
+      end
+    end
+
+    it "uses fail-level to decide the exit status" do
+      Tempfile.create(["test", ".y"]) do |f|
+        f.write(<<~GRAMMAR)
+          %token lowercase
+          %%
+          %%
+        GRAMMAR
+        f.flush
+
+        output = `bundle exec exe/collie lint --only=TokenNaming --fail-level convention #{f.path} 2>&1`
+
+        expect(output).to include("TokenNaming")
+        expect($CHILD_STATUS.exitstatus).to eq(1)
+      end
+    end
   end
 
   describe "fmt command" do
@@ -82,6 +121,41 @@ RSpec.describe "CLI integration" do
         # May or may not need formatting, just ensure it runs
         expect($CHILD_STATUS.exitstatus).to be_between(0, 1)
       end
+    end
+
+    it "exits with failure when --check finds formatting changes" do
+      Tempfile.create(["test", ".y"]) do |f|
+        f.write("%token NUMBER\n%%\n%%\n")
+        f.flush
+
+        output = `bundle exec exe/collie fmt --check #{f.path} 2>&1`
+
+        expect(output).to include("needs formatting")
+        expect($CHILD_STATUS.exitstatus).to eq(1)
+      end
+    end
+
+    it "shows --diff without rewriting files" do
+      source = "%token NUMBER\n%%\n%%\n"
+
+      Tempfile.create(["test", ".y"]) do |f|
+        f.write(source)
+        f.flush
+
+        output = `bundle exec exe/collie fmt --diff #{f.path} 2>&1`
+
+        expect(output).to include("needs formatting")
+        expect(output).to include("@@")
+        expect(File.read(f.path)).to eq(source)
+        expect($CHILD_STATUS.exitstatus).to eq(1)
+      end
+    end
+
+    it "exits with failure for missing files" do
+      output = `bundle exec exe/collie fmt /tmp/collie-missing-file.y 2>&1`
+
+      expect(output).to include("File not found")
+      expect($CHILD_STATUS.exitstatus).to eq(1)
     end
   end
 
