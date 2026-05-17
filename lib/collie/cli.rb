@@ -446,7 +446,8 @@ module Collie
       configured = rule_config["severity"] || rule_config[:severity]
       return rule.severity unless configured
 
-      configured.to_sym
+      normalized = configured.to_sym
+      Linter::Base::VALID_SEVERITIES.include?(normalized) ? normalized : rule.severity
     end
 
     def rule_metadata(rule, config, rule_config)

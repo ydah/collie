@@ -340,6 +340,23 @@ RSpec.describe "CLI integration" do
         expect(token_naming["severity"]).to eq("error")
       end
     end
+
+    it "falls back to default severity for invalid config severity in JSON metadata" do
+      Tempfile.create(["config", ".yml"]) do |f|
+        f.write(<<~YAML)
+          rules:
+            TokenNaming:
+              severity: fatal
+        YAML
+        f.flush
+
+        output = `bundle exec exe/collie rules --format json --config #{f.path} 2>&1`
+        data = JSON.parse(output)
+        token_naming = data.find { |rule| rule["name"] == "TokenNaming" }
+
+        expect(token_naming["severity"]).to eq("convention")
+      end
+    end
   end
 
   describe "explain command" do
