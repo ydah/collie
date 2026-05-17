@@ -15,7 +15,8 @@ module Collie
         DEFAULT_PATTERN = /^[a-z][a-z0-9_]*$/
 
         def check(ast, _context = {})
-          pattern = @config[:pattern] ? Regexp.new(@config[:pattern]) : DEFAULT_PATTERN
+          pattern_config = config_value(:pattern)
+          pattern = pattern_config ? Regexp.new(pattern_config) : DEFAULT_PATTERN
 
           ast.rules.each do |rule|
             next if rule.name.match?(pattern)

@@ -15,7 +15,8 @@ module Collie
         DEFAULT_PATTERN = /^[A-Z][A-Z0-9_]*$/
 
         def check(ast, _context = {})
-          pattern = @config[:pattern] ? Regexp.new(@config[:pattern]) : DEFAULT_PATTERN
+          pattern_config = config_value(:pattern)
+          pattern = pattern_config ? Regexp.new(pattern_config) : DEFAULT_PATTERN
 
           ast.declarations.each do |decl|
             next unless decl.is_a?(AST::TokenDeclaration)

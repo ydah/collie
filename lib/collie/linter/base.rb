@@ -28,6 +28,8 @@ module Collie
 
     # Base class for all lint rules
     class Base
+      VALID_SEVERITIES = %i[error warning convention info].freeze
+
       class << self
         attr_accessor :rule_name, :description, :severity, :autocorrectable
       end
@@ -52,11 +54,28 @@ module Collie
           rule: self.class,
           location: node.location,
           message: message,
+          severity: configured_severity,
           autocorrect: autocorrect
         )
       end
 
       attr_reader :offenses
+
+      def configured_severity
+        severity = config_value(:severity)
+        return self.class.severity unless severity
+
+        normalized = severity.to_sym
+        VALID_SEVERITIES.include?(normalized) ? normalized : self.class.severity
+      end
+
+      def config_value(key, default = nil)
+        string_key = key.to_s
+        return @config[string_key] if @config.key?(string_key)
+        return @config[key] if @config.key?(key)
+
+        default
+      end
     end
   end
 end

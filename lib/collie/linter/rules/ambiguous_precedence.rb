@@ -75,7 +75,8 @@ module Collie
           offense = Offense.new(
             rule: self.class,
             location: location,
-            message: message
+            message: message,
+            severity: configured_severity
           )
           @offenses << offense
         end

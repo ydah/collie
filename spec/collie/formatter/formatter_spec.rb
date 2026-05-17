@@ -13,6 +13,16 @@ RSpec.describe Collie::Formatter::Formatter do
   end
 
   describe "#format" do
+    it "honors YAML-style formatter option keys" do
+      options = Collie::Formatter::Options.new(
+        "indent_size" => 4,
+        "align_tokens" => false
+      )
+
+      expect(options.indent).to eq(" " * 4)
+      expect(options.align_tokens).to be false
+    end
+
     it "formats token declarations" do
       source = <<~GRAMMAR
         %token NUMBER IDENTIFIER

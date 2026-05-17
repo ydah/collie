@@ -43,11 +43,7 @@ RSpec.describe Collie::Linter::Rules::LongRule do
 
     it "respects custom max_alternatives from config" do
       config = {
-        "rules" => {
-          "LongRule" => {
-            "max_alternatives" => 3
-          }
-        }
+        "max_alternatives" => 3
       }
       rule = described_class.new(config)
       grammar = create_grammar_with_alternatives(5)

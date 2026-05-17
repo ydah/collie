@@ -13,7 +13,7 @@ module Collie
         DEFAULT_MAX_ALTERNATIVES = 10
 
         def check(ast, _context = {})
-          max_alternatives = @config.dig("rules", "LongRule", "max_alternatives") || DEFAULT_MAX_ALTERNATIVES
+          max_alternatives = config_value(:max_alternatives, DEFAULT_MAX_ALTERNATIVES)
 
           ast.rules.each do |rule|
             alternatives_count = rule.alternatives.size

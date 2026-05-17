@@ -69,5 +69,33 @@ RSpec.describe Collie::Linter::Rules::TokenNaming do
 
       expect(offenses).to be_empty
     end
+
+    it "allows custom pattern from YAML-style string keys" do
+      source = <<~GRAMMAR
+        %token mytoken
+        %%
+        %%
+      GRAMMAR
+
+      ast = parse_grammar(source)
+      rule = described_class.new("pattern" => "^[a-z]+$")
+      offenses = rule.check(ast)
+
+      expect(offenses).to be_empty
+    end
+
+    it "applies configured severity from YAML-style string keys" do
+      source = <<~GRAMMAR
+        %token mytoken
+        %%
+        %%
+      GRAMMAR
+
+      ast = parse_grammar(source)
+      rule = described_class.new("severity" => "error")
+      offenses = rule.check(ast)
+
+      expect(offenses.first.severity).to eq(:error)
+    end
   end
 end
