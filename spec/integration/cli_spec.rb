@@ -127,6 +127,19 @@ RSpec.describe "CLI integration" do
         expect($CHILD_STATUS.exitstatus).to eq(1)
       end
     end
+
+    it "reports parse errors through reporters" do
+      Tempfile.create(["test", ".y"]) do |f|
+        f.write("%token NUMBER\n")
+        f.flush
+
+        output = `bundle exec exe/collie lint --format github #{f.path} 2>&1`
+
+        expect(output).to include("::error")
+        expect(output).to include("Expected SECTION_SEPARATOR")
+        expect($CHILD_STATUS.exitstatus).to eq(1)
+      end
+    end
   end
 
   describe "fmt command" do

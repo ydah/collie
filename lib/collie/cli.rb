@@ -5,6 +5,15 @@ require "thor"
 module Collie
   # Command-line interface
   class CLI < Thor
+    PARSE_ERROR_RULE = Class.new do
+      class << self
+        def rule_name = "ParseError"
+        def description = "Reports grammar parse errors"
+        def severity = :error
+        def autocorrectable = false
+      end
+    end
+
     def self.exit_on_failure?
       true
     end
@@ -40,11 +49,6 @@ module Collie
         end
 
         offenses = lint_file(file, config)
-        unless offenses
-          failed = true
-          next
-        end
-
         all_offenses.concat(offenses)
       end
 
@@ -145,8 +149,7 @@ module Collie
 
       offenses
     rescue Error => e
-      say "Error parsing #{file}: #{e.message}", :red
-      nil
+      [parse_error_offense(file, e.message)]
     end
 
     def build_symbol_table(ast)
@@ -240,6 +243,23 @@ module Collie
       tokens = lexer.tokenize
       parser = Parser::Parser.new(tokens)
       parser.parse
+    end
+
+    def parse_error_offense(file, message)
+      Linter::Offense.new(
+        rule: PARSE_ERROR_RULE,
+        location: parse_error_location(file, message),
+        message: message,
+        severity: :error
+      )
+    end
+
+    def parse_error_location(file, message)
+      match = message.match(/:(\d+):(\d+)\b/)
+      line = match ? match[1].to_i : 1
+      column = match ? match[2].to_i : 1
+
+      AST::Location.new(file: file, line: line, column: column)
     end
 
     def filter_rules(rules)
