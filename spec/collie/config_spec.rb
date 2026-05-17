@@ -106,6 +106,15 @@ RSpec.describe Collie::Config do
       end
     end
 
+    it "rejects invalid YAML config files" do
+      Tempfile.create(["config", ".yml"]) do |f|
+        f.write("rules:\n  Broken: [\n")
+        f.flush
+
+        expect { described_class.new(f.path) }.to raise_error(Collie::Error, /Invalid config file/)
+      end
+    end
+
     it "rejects explicitly missing config files" do
       expect { described_class.new("/tmp/collie-missing-config.yml") }
         .to raise_error(Collie::Error, /Config file not found/)
@@ -149,6 +158,15 @@ RSpec.describe Collie::Config do
           expect(config.rule_enabled?("DuplicateToken")).to be false
           expect(config.rule_enabled?("TokenNaming")).to be false
         end
+      end
+    end
+
+    it "rejects missing parent config files" do
+      Tempfile.create(["child", ".yml"]) do |child|
+        child.write("inherit_from: missing-parent.yml\n")
+        child.flush
+
+        expect { described_class.new(child.path) }.to raise_error(Collie::Error, /Inherited config file not found/)
       end
     end
   end

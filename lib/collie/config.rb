@@ -72,7 +72,9 @@ module Collie
 
       if user_config["inherit_from"]
         parent_path = File.expand_path(user_config["inherit_from"], File.dirname(path))
-        config = deep_merge(config, load_yaml_config(parent_path)) if File.exist?(parent_path)
+        raise Error, "Inherited config file not found: #{parent_path}" unless File.exist?(parent_path)
+
+        config = deep_merge(config, load_yaml_config(parent_path))
       end
 
       deep_merge(config, user_config)
@@ -83,6 +85,8 @@ module Collie
       raise Error, "Config file must contain a YAML mapping: #{path}" unless loaded.is_a?(Hash)
 
       loaded
+    rescue Psych::SyntaxError => e
+      raise Error, "Invalid config file #{path}: #{e.message}"
     end
 
     def deep_merge(hash1, hash2)
