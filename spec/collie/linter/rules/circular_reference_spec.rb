@@ -57,6 +57,25 @@ RSpec.describe Collie::Linter::Rules::CircularReference do
       expect(offenses).to be_empty
     end
 
+    it "allows circular references with a productive alternative" do
+      grammar = create_grammar({
+                                 "a" => [["b"]],
+                                 "b" => [["a"], ["NUMBER"]]
+                               })
+
+      offenses = rule.check(grammar)
+      expect(offenses).to be_empty
+    end
+
+    it "detects self recursion with no productive alternative" do
+      grammar = create_grammar({
+                                 "a" => [["a"]]
+                               })
+
+      offenses = rule.check(grammar)
+      expect(offenses.map(&:message).join("\n")).to include("non-productive circular reference")
+    end
+
     it "allows acyclic grammar" do
       grammar = create_grammar({
                                  "start" => [["expr"]],

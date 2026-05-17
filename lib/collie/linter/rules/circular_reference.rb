@@ -14,14 +14,16 @@ module Collie
 
         def check(ast, _context = {})
           @rules_map = build_rules_map(ast)
-          @visited = Set.new
-          @rec_stack = Set.new
+          @dependencies = build_dependency_graph
+          productive_rules = compute_productive_rules
 
-          ast.rules.each do |rule|
-            next if @visited.include?(rule.name)
+          strongly_connected_components.each do |component|
+            next unless cyclic_component?(component)
+            next if component.any? { |rule_name| productive_rules.include?(rule_name) }
 
-            if has_cycle?(rule.name, [])
-              add_offense(rule, message: "Rule '#{rule.name}' is part of a circular reference")
+            component.each do |rule_name|
+              rule = @rules_map[rule_name]
+              add_offense(rule, message: "Rule '#{rule_name}' is part of a non-productive circular reference") if rule
             end
           end
 
@@ -31,57 +33,111 @@ module Collie
         private
 
         def build_rules_map(ast)
-          ast.rules.each_with_object({}) do |rule, map|
-            map[rule.name] = rule
+          rules = ast.rules + ast.declarations.select do |decl|
+            decl.is_a?(AST::ParameterizedRule) || decl.is_a?(AST::InlineRule)
+          end
+
+          rules.each_with_object({}) do |rule, map|
+            map[rule_name(rule)] = rule
           end
         end
 
-        def has_cycle?(rule_name, path)
-          return false if @visited.include?(rule_name)
-
-          if @rec_stack.include?(rule_name)
-            # Found a cycle - check if it's truly circular (no terminals in alternatives)
-            return true if pure_nonterminal_cycle?(rule_name)
-
-            return false
-          end
-
-          @rec_stack.add(rule_name)
-          current_path = path + [rule_name]
-
-          rule = @rules_map[rule_name]
-          # Check each alternative - only follow nonterminals
-          rule&.alternatives&.each do |alt|
-            # Skip alternatives with terminals or empty alternatives
-            next if has_terminal_or_empty?(alt)
-
-            # Only check the first symbol for cycles
-            first_symbol = alt.symbols.first
-            next unless first_symbol&.nonterminal?
-
-            return true if has_cycle?(first_symbol.name, current_path)
-          end
-
-          @rec_stack.delete(rule_name)
-          @visited.add(rule_name)
-
-          false
+        def rule_name(rule)
+          rule.is_a?(AST::InlineRule) ? rule.rule : rule.name
         end
 
-        def has_terminal_or_empty?(alternative)
-          return true if alternative.symbols.empty?
-
-          alternative.symbols.any?(&:terminal?)
+        def build_dependency_graph
+          @rules_map.transform_values do |rule|
+            rule.alternatives.each_with_object(Set.new) do |alternative, dependencies|
+              alternative.symbols.each { |symbol| collect_dependencies(symbol, dependencies) }
+            end
+          end
         end
 
-        def pure_nonterminal_cycle?(rule_name)
-          rule = @rules_map[rule_name]
-          return false unless rule
+        def collect_dependencies(symbol, dependencies)
+          dependencies << symbol.name if symbol.nonterminal? && @rules_map.key?(symbol.name)
+          symbol.arguments&.each { |argument| collect_dependencies(argument, dependencies) }
+        end
 
-          # Check if all alternatives contain only nonterminals
-          rule.alternatives.all? do |alt|
-            !has_terminal_or_empty?(alt)
+        def compute_productive_rules
+          productive = Set.new
+
+          loop do
+            changed = false
+
+            @rules_map.each do |name, rule|
+              next if productive.include?(name)
+              next unless rule.alternatives.any? { |alternative| productive_alternative?(alternative, productive) }
+
+              productive << name
+              changed = true
+            end
+
+            break unless changed
           end
+
+          productive
+        end
+
+        def productive_alternative?(alternative, productive_rules)
+          return true if alternative.explicit_empty || alternative.symbols.empty?
+
+          alternative.symbols.all? do |symbol|
+            productive_symbol?(symbol, productive_rules)
+          end
+        end
+
+        def productive_symbol?(symbol, productive_rules)
+          return true if symbol.terminal?
+
+          symbol.nonterminal? && productive_rules.include?(symbol.name)
+        end
+
+        def strongly_connected_components
+          @index = 0
+          @indices = {}
+          @lowlinks = {}
+          @stack = []
+          @on_stack = Set.new
+          components = []
+
+          @rules_map.each_key do |rule_name|
+            strong_connect(rule_name, components) unless @indices.key?(rule_name)
+          end
+
+          components
+        end
+
+        def strong_connect(rule_name, components)
+          @indices[rule_name] = @index
+          @lowlinks[rule_name] = @index
+          @index += 1
+          @stack << rule_name
+          @on_stack << rule_name
+
+          @dependencies[rule_name].each do |dependency|
+            if !@indices.key?(dependency)
+              strong_connect(dependency, components)
+              @lowlinks[rule_name] = [@lowlinks[rule_name], @lowlinks[dependency]].min
+            elsif @on_stack.include?(dependency)
+              @lowlinks[rule_name] = [@lowlinks[rule_name], @indices[dependency]].min
+            end
+          end
+
+          return unless @lowlinks[rule_name] == @indices[rule_name]
+
+          component = []
+          loop do
+            dependency = @stack.pop
+            @on_stack.delete(dependency)
+            component << dependency
+            break if dependency == rule_name
+          end
+          components << component
+        end
+
+        def cyclic_component?(component)
+          component.size > 1 || @dependencies[component.first].include?(component.first)
         end
       end
     end
