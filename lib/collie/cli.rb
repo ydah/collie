@@ -108,13 +108,7 @@ module Collie
       if options[:format] == "json"
         output = Linter::Registry.all.map do |rule|
           rule_config = config.rule_config(rule.rule_name)
-          {
-            name: rule.rule_name,
-            description: rule.description,
-            enabled: config.rule_enabled?(rule.rule_name),
-            severity: configured_rule_severity(rule, rule_config),
-            autocorrectable: rule.autocorrectable
-          }
+          rule_metadata(rule, config, rule_config)
         end
         puts JSON.pretty_generate(output)
       else
@@ -128,6 +122,33 @@ module Collie
           say "  #{rule.rule_name} (#{set_color(severity, severity_color)})#{autocorrect}#{enabled}"
           say "    #{rule.description}", :dim
         end
+      end
+    end
+
+    desc "explain RULE", "Explain a lint rule"
+    option :config, type: :string, desc: "Config file path"
+    option :format, type: :string, default: "text", enum: %w[text json]
+    def explain(rule_name)
+      config = Config.new(options[:config])
+      Linter::Registry.load_rules
+
+      rule = Linter::Registry.find(rule_name)
+      unless rule
+        say "Unknown rule: #{rule_name}", :red
+        exit 1
+      end
+
+      rule_config = config.rule_config(rule.rule_name)
+      metadata = rule_metadata(rule, config, rule_config)
+
+      if options[:format] == "json"
+        puts JSON.pretty_generate(metadata)
+      else
+        say metadata[:name], :bold
+        say "  Description: #{metadata[:description]}"
+        say "  Enabled: #{metadata[:enabled]}"
+        say "  Severity: #{metadata[:severity]}"
+        say "  Autocorrectable: #{metadata[:autocorrectable]}"
       end
     end
 
@@ -391,6 +412,16 @@ module Collie
       return rule.severity unless configured
 
       configured.to_sym
+    end
+
+    def rule_metadata(rule, config, rule_config)
+      {
+        name: rule.rule_name,
+        description: rule.description,
+        enabled: config.rule_enabled?(rule.rule_name),
+        severity: configured_rule_severity(rule, rule_config),
+        autocorrectable: rule.autocorrectable
+      }
     end
 
     def severity_color(severity)

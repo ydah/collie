@@ -237,6 +237,23 @@ RSpec.describe "CLI integration" do
     end
   end
 
+  describe "explain command" do
+    it "explains a rule" do
+      output = `bundle exec exe/collie explain DuplicateToken 2>&1`
+
+      expect(output).to include("DuplicateToken")
+      expect(output).to include("Severity:")
+      expect($CHILD_STATUS.exitstatus).to eq(0)
+    end
+
+    it "exits with failure for unknown rules" do
+      output = `bundle exec exe/collie explain MissingRule 2>&1`
+
+      expect(output).to include("Unknown rule")
+      expect($CHILD_STATUS.exitstatus).to eq(1)
+    end
+  end
+
   describe "version command" do
     it "shows version" do
       output = `bundle exec exe/collie version 2>&1`
