@@ -50,6 +50,18 @@ RSpec.describe "CLI integration" do
       end
     end
 
+    it "expands directory targets" do
+      Dir.mktmpdir("collie") do |dir|
+        file = File.join(dir, "grammar.y")
+        File.write(file, valid_grammar_without_warnings)
+
+        output = `bundle exec exe/collie lint #{dir} 2>&1`
+
+        expect(output).to include("No offenses detected").or include("✓")
+        expect($CHILD_STATUS.exitstatus).to eq(0), "Expected exit 0, got #{$CHILD_STATUS.exitstatus}. Output: #{output}"
+      end
+    end
+
     it "autocorrects offenses with -a flag" do
       # NOTE: Explicit trailing spaces added to lines
       grammar_with_trailing_whitespace = "%token NUMBER  \n\n%%\n\nexpr: NUMBER ;  \n\n%%\n"
@@ -240,6 +252,19 @@ RSpec.describe "CLI integration" do
 
         `bundle exec exe/collie fmt --check #{f.path} 2>&1`
         # May or may not need formatting, just ensure it runs
+        expect($CHILD_STATUS.exitstatus).to be_between(0, 1)
+      end
+    end
+
+    it "expands directory targets" do
+      Dir.mktmpdir("collie") do |dir|
+        file = File.join(dir, "grammar.y")
+        File.write(file, "%token NUMBER\n%%\n%%\n")
+
+        output = `bundle exec exe/collie fmt --check #{dir} 2>&1`
+
+        expect(output).to include("grammar.y")
+        expect(output).to include("needs formatting").or include("OK")
         expect($CHILD_STATUS.exitstatus).to be_between(0, 1)
       end
     end

@@ -396,7 +396,13 @@ module Collie
     end
 
     def expand_target(target)
-      return Dir.glob(target).select { |path| File.file?(path) } if glob_pattern?(target)
+      if glob_pattern?(target)
+        return Dir.glob(target).select { |path| File.file?(path) }.sort
+      end
+
+      if File.directory?(target)
+        return Dir.glob(File.join(target, "**", "*.y")).select { |path| File.file?(path) }.sort
+      end
 
       [target]
     end
