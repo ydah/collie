@@ -109,6 +109,24 @@ RSpec.describe "CLI integration" do
         expect($CHILD_STATUS.exitstatus).to eq(1)
       end
     end
+
+    it "supports SARIF output" do
+      Tempfile.create(["test", ".y"]) do |f|
+        f.write(<<~GRAMMAR)
+          %token NUMBER NUMBER
+          %%
+          %%
+        GRAMMAR
+        f.flush
+
+        output = `bundle exec exe/collie lint --format sarif #{f.path} 2>&1`
+        data = JSON.parse(output)
+
+        expect(data["version"]).to eq("2.1.0")
+        expect(data["runs"].first["results"].first["ruleId"]).to eq("DuplicateToken")
+        expect($CHILD_STATUS.exitstatus).to eq(1)
+      end
+    end
   end
 
   describe "fmt command" do

@@ -17,6 +17,7 @@ require_relative "collie/formatter/options"
 require_relative "collie/reporter/text"
 require_relative "collie/reporter/json"
 require_relative "collie/reporter/github"
+require_relative "collie/reporter/sarif"
 
 # Collie is a linter and formatter for Lrama Style BNF grammar files (.y files).
 #

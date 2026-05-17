@@ -13,7 +13,7 @@ module Collie
 
     desc "lint FILES", "Lint grammar files"
     option :config, type: :string, desc: "Config file path"
-    option :format, type: :string, default: "text", enum: %w[text json github], desc: "Output format"
+    option :format, type: :string, default: "text", enum: %w[text json github sarif], desc: "Output format"
     option :autocorrect, type: :boolean, aliases: "-a", desc: "Auto-fix offenses"
     option :only, type: :array, desc: "Run only specified rules"
     option :except, type: :array, desc: "Exclude specified rules"
@@ -301,6 +301,8 @@ module Collie
         Reporter::Json.new
       when "github"
         Reporter::Github.new
+      when "sarif"
+        Reporter::Sarif.new
       else
         Reporter::Text.new
       end
