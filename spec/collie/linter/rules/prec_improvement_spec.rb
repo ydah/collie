@@ -69,5 +69,28 @@ RSpec.describe Collie::Linter::Rules::PrecImprovement do
       offenses = rule.check(grammar)
       expect(offenses).to be_empty
     end
+
+    it "checks %prec usage in parameterized rule declarations" do
+      alternative = Collie::AST::Alternative.new(
+        symbols: [
+          Collie::AST::Symbol.new(name: "X", kind: :terminal, location: nil)
+        ],
+        prec: "UMINUS",
+        location: nil
+      )
+      declaration = Collie::AST::ParameterizedRule.new(
+        name: "negated",
+        parameters: ["X"],
+        alternatives: [alternative],
+        location: nil
+      )
+      grammar = Collie::AST::GrammarFile.new(rules: [], declarations: [declaration])
+
+      offenses = rule.check(grammar)
+      expect(offenses.map(&:message)).to include(
+        "%%prec token 'UMINUS' is not declared in precedence directives. " \
+        "Consider adding it to %left, %right, or %nonassoc."
+      )
+    end
   end
 end

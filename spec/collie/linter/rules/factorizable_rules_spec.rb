@@ -74,5 +74,24 @@ RSpec.describe Collie::Linter::Rules::FactorizableRules do
       expect(offenses).not_to be_empty
       expect(offenses.first.message).to include("3 symbols")
     end
+
+    it "checks inline declarations" do
+      alternatives = [
+        %w[IF EXPR THEN STMT],
+        %w[IF EXPR THEN STMT ELSE STMT]
+      ].map do |symbols_data|
+        symbols = symbols_data.map do |sym_name|
+          Collie::AST::Symbol.new(name: sym_name, kind: :terminal, location: nil)
+        end
+        Collie::AST::Alternative.new(symbols: symbols, location: nil)
+      end
+      declaration = Collie::AST::InlineRule.new(rule: "branch", alternatives: alternatives, location: nil)
+      grammar = Collie::AST::GrammarFile.new(rules: [], declarations: [declaration])
+
+      offenses = rule.check(grammar)
+      expect(offenses.map(&:message)).to include(
+        "Rule 'branch' has 2 alternatives with common prefix (4 symbols). Consider factoring."
+      )
+    end
   end
 end

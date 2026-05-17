@@ -76,6 +76,28 @@ module Collie
 
         default
       end
+
+      def each_rule_like(ast)
+        ast.rules.each { |rule| yield rule }
+
+        ast.declarations.each do |declaration|
+          next unless rule_like_declaration?(declaration)
+
+          yield declaration
+        end
+      end
+
+      def rule_like_declaration?(declaration)
+        declaration.is_a?(AST::ParameterizedRule) || declaration.is_a?(AST::InlineRule)
+      end
+
+      def rule_like_name(rule)
+        rule.is_a?(AST::InlineRule) ? rule.rule : rule.name
+      end
+
+      def rule_like_parameters(rule)
+        rule.respond_to?(:parameters) ? rule.parameters : []
+      end
     end
   end
 end

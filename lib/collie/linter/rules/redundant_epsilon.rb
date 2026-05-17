@@ -11,7 +11,7 @@ module Collie
         self.autocorrectable = false
 
         def check(ast, _context = {})
-          ast.rules.each do |rule|
+          each_rule_like(ast) do |rule|
             check_rule(rule)
           end
 
@@ -27,7 +27,7 @@ module Collie
           epsilon_alternatives.drop(1).each do |alt|
             add_offense(
               alt,
-              message: "Rule '#{rule.name}' has multiple epsilon productions. " \
+              message: "Rule '#{rule_like_name(rule)}' has multiple epsilon productions. " \
                        "Keep one empty alternative and remove duplicates."
             )
           end

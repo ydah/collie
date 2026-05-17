@@ -67,7 +67,7 @@ module Collie
 
           # Track nonterminal usage in parameterized rules (%rule)
           ast.declarations.each do |decl|
-            next unless decl.is_a?(AST::ParameterizedRule)
+            next unless decl.is_a?(AST::ParameterizedRule) || decl.is_a?(AST::InlineRule)
 
             decl.alternatives.each do |alt|
               alt.symbols.each do |symbol|

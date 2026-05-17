@@ -76,5 +76,19 @@ RSpec.describe Collie::Linter::Rules::RedundantEpsilon do
       offenses = rule.check(grammar)
       expect(offenses.size).to eq(1)
     end
+
+    it "detects duplicate epsilon productions in inline declarations" do
+      empty_alternatives = [
+        Collie::AST::Alternative.new(explicit_empty: true, location: nil),
+        Collie::AST::Alternative.new(explicit_empty: true, location: nil)
+      ]
+      declaration = Collie::AST::InlineRule.new(rule: "opt", alternatives: empty_alternatives, location: nil)
+      grammar = Collie::AST::GrammarFile.new(rules: [], declarations: [declaration])
+
+      offenses = rule.check(grammar)
+      expect(offenses.map(&:message)).to include(
+        "Rule 'opt' has multiple epsilon productions. Keep one empty alternative and remove duplicates."
+      )
+    end
   end
 end

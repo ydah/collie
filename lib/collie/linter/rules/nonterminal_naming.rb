@@ -18,11 +18,12 @@ module Collie
           pattern_config = config_value(:pattern)
           pattern = pattern_config ? Regexp.new(pattern_config) : DEFAULT_PATTERN
 
-          ast.rules.each do |rule|
-            next if rule.name.match?(pattern)
+          each_rule_like(ast) do |rule|
+            name = rule_like_name(rule)
+            next if name.match?(pattern)
 
             add_offense(rule,
-                        message: "Nonterminal '#{rule.name}' should match pattern #{pattern.inspect}")
+                        message: "Nonterminal '#{name}' should match pattern #{pattern.inspect}")
           end
 
           @offenses

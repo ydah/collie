@@ -105,5 +105,19 @@ RSpec.describe Collie::Linter::Rules::AmbiguousPrecedence do
       offenses = rule.check(grammar)
       expect(offenses).to be_empty
     end
+
+    it "checks operators in inline declarations" do
+      symbols = [
+        Collie::AST::Symbol.new(name: "expr", kind: :nonterminal, location: nil),
+        Collie::AST::Symbol.new(name: "+", kind: :terminal, location: nil),
+        Collie::AST::Symbol.new(name: "expr", kind: :nonterminal, location: nil)
+      ]
+      alternative = Collie::AST::Alternative.new(symbols: symbols, location: nil)
+      declaration = Collie::AST::InlineRule.new(rule: "sum", alternatives: [alternative], location: nil)
+      grammar = Collie::AST::GrammarFile.new(rules: [], declarations: [declaration])
+
+      offenses = rule.check(grammar)
+      expect(offenses.map(&:message)).to include("Operator '+' does not have an explicit precedence declaration")
+    end
   end
 end

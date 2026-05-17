@@ -15,14 +15,14 @@ module Collie
         def check(ast, _context = {})
           max_alternatives = config_value(:max_alternatives, DEFAULT_MAX_ALTERNATIVES)
 
-          ast.rules.each do |rule|
+          each_rule_like(ast) do |rule|
             alternatives_count = rule.alternatives.size
 
             next unless alternatives_count > max_alternatives
 
             add_offense(
               rule,
-              message: "Rule '#{rule.name}' has #{alternatives_count} alternatives " \
+              message: "Rule '#{rule_like_name(rule)}' has #{alternatives_count} alternatives " \
                        "(max: #{max_alternatives}). Consider refactoring."
             )
           end

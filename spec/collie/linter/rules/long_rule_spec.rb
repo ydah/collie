@@ -52,5 +52,22 @@ RSpec.describe Collie::Linter::Rules::LongRule do
       expect(offenses).not_to be_empty
       expect(offenses.first.message).to include("max: 3")
     end
+
+    it "checks inline declarations" do
+      alternatives = 4.times.map do
+        Collie::AST::Alternative.new(
+          symbols: [Collie::AST::Symbol.new(name: "ITEM", kind: :terminal, location: nil)],
+          location: nil
+        )
+      end
+      declaration = Collie::AST::InlineRule.new(rule: "many", alternatives: alternatives, location: nil)
+      grammar = Collie::AST::GrammarFile.new(rules: [], declarations: [declaration])
+      rule = described_class.new("max_alternatives" => 3)
+
+      offenses = rule.check(grammar)
+      expect(offenses.map(&:message)).to include(
+        "Rule 'many' has 4 alternatives (max: 3). Consider refactoring."
+      )
+    end
   end
 end

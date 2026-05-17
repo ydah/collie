@@ -13,7 +13,7 @@ module Collie
         def check(ast, _context = {})
           precedence_tokens = collect_precedence_tokens(ast)
 
-          ast.rules.each do |rule|
+          each_rule_like(ast) do |rule|
             check_rule(rule, precedence_tokens)
           end
 

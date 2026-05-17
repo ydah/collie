@@ -92,5 +92,18 @@ RSpec.describe Collie::Linter::Rules::EmptyAction do
       expect(context[:source]).not_to include("{   }")
       expect(grammar.rules.first.alternatives.first.action).to be_nil
     end
+
+    it "detects empty actions in inline declarations" do
+      source = <<~GRAMMAR
+        %inline opt(X): X {   } ;
+        %%
+        %%
+      GRAMMAR
+
+      grammar = parse_grammar(source)
+      offenses = rule.check(grammar)
+
+      expect(offenses.map(&:message)).to include("Empty action block can be removed")
+    end
   end
 end

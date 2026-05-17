@@ -13,7 +13,7 @@ module Collie
         MIN_PREFIX_LENGTH = 2
 
         def check(ast, _context = {})
-          ast.rules.each do |rule|
+          each_rule_like(ast) do |rule|
             check_rule(rule)
           end
 
@@ -37,7 +37,7 @@ module Collie
 
             add_offense(
               rule,
-              message: "Rule '#{rule.name}' has #{alternatives.size} alternatives with common prefix " \
+              message: "Rule '#{rule_like_name(rule)}' has #{alternatives.size} alternatives with common prefix " \
                        "(#{prefix_length} symbols). Consider factoring."
             )
             break # Only report once per rule

@@ -15,9 +15,10 @@ module Collie
         def check(ast, context = {})
           symbol_table = context[:symbol_table] || build_symbol_table(ast)
 
-          ast.rules.each do |rule|
+          each_rule_like(ast) do |rule|
+            allowed_symbols = rule_like_parameters(rule)
             rule.alternatives.each do |alt|
-              alt.symbols.each { |symbol| check_symbol(symbol_table, symbol) }
+              alt.symbols.each { |symbol| check_symbol(symbol_table, symbol, allowed_symbols: allowed_symbols) }
             end
           end
 
@@ -45,13 +46,15 @@ module Collie
           end
         end
 
-        def check_symbol(symbol_table, symbol)
-          unless symbol_table.declared?(symbol.name)
+        def check_symbol(symbol_table, symbol, allowed_symbols: [])
+          unless allowed_symbols.include?(symbol.name) || symbol_table.declared?(symbol.name)
             add_offense(symbol,
                         message: "Undefined symbol '#{symbol.name}'")
           end
 
-          symbol.arguments&.each { |argument| check_symbol(symbol_table, argument) }
+          symbol.arguments&.each do |argument|
+            check_symbol(symbol_table, argument, allowed_symbols: allowed_symbols)
+          end
         end
 
         def build_symbol_table(ast)

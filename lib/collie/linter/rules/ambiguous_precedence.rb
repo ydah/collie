@@ -53,7 +53,7 @@ module Collie
         def collect_operators(ast)
           operators = Hash.new { |h, k| h[k] = [] }
 
-          ast.rules.each do |rule|
+          each_rule_like(ast) do |rule|
             rule.alternatives.each do |alt|
               next if alt.prec
 

@@ -11,7 +11,7 @@ module Collie
         self.autocorrectable = true
 
         def check(ast, context = {})
-          ast.rules.each do |rule|
+          each_rule_like(ast) do |rule|
             check_rule(rule, context)
           end
 
