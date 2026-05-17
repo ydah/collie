@@ -54,6 +54,15 @@ RSpec.describe Collie::Linter::Rules::RightRecursion do
       expect(offenses).to be_empty
     end
 
+    it "allows binary operator rules that are also left recursive" do
+      grammar = create_grammar({
+                                 "expr" => [%w[expr PLUS expr], ["NUMBER"]]
+                               })
+
+      offenses = rule.check(grammar)
+      expect(offenses).to be_empty
+    end
+
     it "detects right recursion in inline declarations" do
       alternative = Collie::AST::Alternative.new(
         symbols: [

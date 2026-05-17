@@ -13,8 +13,11 @@ module Collie
         def check(ast, _context = {})
           analyzer = Analyzer::Recursion.new(ast)
           result = analyzer.analyze
+          left_recursive = result[:left_recursive]
 
           result[:right_recursive].each do |rule_name|
+            next if left_recursive.include?(rule_name)
+
             rule = find_rule_like(ast, rule_name)
             next unless rule
 
