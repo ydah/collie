@@ -35,16 +35,13 @@ jobs:
       run: gem install collie
     - name: Run Collie lint
       run: |
-        if [ -f "${{ inputs.config }}" ]; then
-          collie lint --config ${{ inputs.config }} ${{ inputs.files }}
-        else
-          collie lint ${{ inputs.files }}
+        FAIL_LEVEL="error"
+        if [ "${{ inputs.fail-on-warnings }}" = "true" ]; then
+          FAIL_LEVEL="warning"
         fi
-    - name: Check for warnings
-      if: inputs.fail-on-warnings
-      run: |
-        OUTPUT=$(collie lint ${{ inputs.files }} 2>&1)
-        if echo "$OUTPUT" | grep -q "warning"; then
-          echo "Warnings found in grammar files"
-          exit 1
+
+        if [ -f "${{ inputs.config }}" ]; then
+          collie lint --config ${{ inputs.config }} --fail-level "$FAIL_LEVEL" ${{ inputs.files }}
+        else
+          collie lint --fail-level "$FAIL_LEVEL" ${{ inputs.files }}
         fi
