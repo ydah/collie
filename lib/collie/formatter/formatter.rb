@@ -34,6 +34,7 @@ module Collie
           output << ast.epilogue.code
         end
 
+        output.pop while output.last == ""
         output.join("\n")
       end
 
@@ -90,6 +91,7 @@ module Collie
           output << ""
         end
 
+        output.pop while output.last == ""
         output.join("\n")
       end
 

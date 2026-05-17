@@ -12,12 +12,25 @@ module Collie
 
       def format_offense(offense)
         level = github_level(offense.severity)
-        file = offense.location.file
+        file = escape_property(offense.location.file)
         line = offense.location.line
         col = offense.location.column
-        message = offense.message.gsub(",", "%2C") # Escape commas
+        message = escape_data(offense.message)
 
         "::#{level} file=#{file},line=#{line},col=#{col}::#{message}"
+      end
+
+      def escape_data(value)
+        value.to_s
+             .gsub("%", "%25")
+             .gsub("\r", "%0D")
+             .gsub("\n", "%0A")
+      end
+
+      def escape_property(value)
+        escape_data(value)
+          .gsub(":", "%3A")
+          .gsub(",", "%2C")
       end
 
       def github_level(severity)
