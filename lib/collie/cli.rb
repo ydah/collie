@@ -4,6 +4,7 @@ require "thor"
 require "json"
 require_relative "config"
 require_relative "formatter/signature"
+require_relative "parser/debug_serializer"
 
 module Collie
   # Command-line interface
@@ -154,6 +155,33 @@ module Collie
         say "  Severity: #{metadata[:severity]}"
         say "  Autocorrectable: #{metadata[:autocorrectable]}"
       end
+    end
+
+    desc "tokens FILE", "Print lexer tokens for debugging"
+    option :stdin, type: :boolean, desc: "Read source from standard input"
+    option :stdin_filename, type: :string, default: "<stdin>", desc: "Filename to use for standard input"
+    def tokens(file = nil)
+      source, filename = debug_source(file)
+      lexer = Parser::Lexer.new(source, filename: filename)
+      output = lexer.tokenize.map { |token| Parser::DebugSerializer.token(token) }
+
+      puts JSON.pretty_generate(output)
+    rescue Error => e
+      say e.message, :red
+      exit 1
+    end
+
+    desc "ast FILE", "Print parsed AST for debugging"
+    option :stdin, type: :boolean, desc: "Read source from standard input"
+    option :stdin_filename, type: :string, default: "<stdin>", desc: "Filename to use for standard input"
+    def ast(file = nil)
+      source, filename = debug_source(file)
+      tree = parse_source(source, filename: filename)
+
+      puts JSON.pretty_generate(Parser::DebugSerializer.ast(tree))
+    rescue Error => e
+      say e.message, :red
+      exit 1
     end
 
     map "config-schema" => :config_schema
@@ -357,6 +385,22 @@ module Collie
       tokens = lexer.tokenize
       parser = Parser::Parser.new(tokens)
       parser.parse
+    end
+
+    def debug_source(file)
+      return [$stdin.read, options[:stdin_filename]] if options[:stdin]
+
+      unless file
+        say "No file specified", :red
+        exit 1
+      end
+
+      unless File.exist?(file)
+        say "File not found: #{file}", :red
+        exit 1
+      end
+
+      [File.read(file), file]
     end
 
     def parse_error_offense(file, message)

@@ -391,6 +391,56 @@ RSpec.describe "CLI integration" do
     end
   end
 
+  describe "debug commands" do
+    it "prints lexer tokens as JSON" do
+      Tempfile.create(["test", ".y"]) do |f|
+        f.write("%token NUMBER\n%%\n%%\n")
+        f.flush
+
+        output = `bundle exec exe/collie tokens #{f.path} 2>&1`
+        tokens = JSON.parse(output)
+
+        expect(tokens.first["type"]).to eq("TOKEN")
+        expect(tokens.first["location"]["file"]).to eq(f.path)
+        expect($CHILD_STATUS.exitstatus).to eq(0)
+      end
+    end
+
+    it "prints parsed AST as JSON" do
+      Tempfile.create(["test", ".y"]) do |f|
+        f.write(<<~GRAMMAR)
+          %token NUMBER
+          %%
+          expr
+              : NUMBER
+              ;
+          %%
+        GRAMMAR
+        f.flush
+
+        output = `bundle exec exe/collie ast #{f.path} 2>&1`
+        ast = JSON.parse(output)
+
+        expect(ast["type"]).to eq("GrammarFile")
+        expect(ast["rules"].first["name"]).to eq("expr")
+        expect(ast["rules"].first["alternatives"].first["symbols"].first["name"]).to eq("NUMBER")
+        expect($CHILD_STATUS.exitstatus).to eq(0)
+      end
+    end
+
+    it "exits with failure when AST parsing fails" do
+      Tempfile.create(["test", ".y"]) do |f|
+        f.write("%token NUMBER\n")
+        f.flush
+
+        output = `bundle exec exe/collie ast #{f.path} 2>&1`
+
+        expect(output).to include("Expected SECTION_SEPARATOR")
+        expect($CHILD_STATUS.exitstatus).to eq(1)
+      end
+    end
+  end
+
   describe "config-schema command" do
     it "prints JSON Schema for config files" do
       output = `bundle exec exe/collie config-schema 2>&1`
