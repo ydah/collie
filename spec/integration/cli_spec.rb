@@ -376,6 +376,32 @@ RSpec.describe "CLI integration" do
     end
   end
 
+  describe "init command" do
+    it "generates a profile config at the requested path" do
+      Dir.mktmpdir("collie") do |dir|
+        path = File.join(dir, ".collie.yml")
+
+        output = `bundle exec exe/collie init --profile lrama --path #{path} 2>&1`
+        config = YAML.safe_load(File.read(path))
+
+        expect(output).to include("Generated")
+        expect(config.dig("rules", "LeftRecursion", "enabled")).to be false
+        expect($CHILD_STATUS.exitstatus).to eq(0)
+      end
+    end
+  end
+
+  describe "config-schema command" do
+    it "prints JSON Schema for config files" do
+      output = `bundle exec exe/collie config-schema 2>&1`
+      schema = JSON.parse(output)
+
+      expect(schema["title"]).to eq("Collie configuration")
+      expect(schema["properties"]["rules"]).not_to be_nil
+      expect($CHILD_STATUS.exitstatus).to eq(0)
+    end
+  end
+
   describe "version command" do
     it "shows version" do
       output = `bundle exec exe/collie version 2>&1`

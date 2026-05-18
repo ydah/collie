@@ -11,6 +11,43 @@ RSpec.describe Collie::Config do
     end
   end
 
+  describe ".profile_config" do
+    it "returns default config for the default profile" do
+      config = described_class.profile_config("default")
+
+      expect(config["formatter"]["indent_size"]).to eq(2)
+      expect(config["rules"]).to eq({})
+    end
+
+    it "disables LL-oriented advice for the lrama profile" do
+      config = described_class.profile_config("lrama")
+
+      expect(config.dig("rules", "LeftRecursion", "enabled")).to be false
+      expect(config.dig("rules", "FactorizableRules", "enabled")).to be false
+      expect(config.dig("rules", "RightRecursion", "severity")).to eq("warning")
+    end
+
+    it "disables noisy rules for the minimal profile" do
+      config = described_class.profile_config("minimal")
+
+      expect(config.dig("rules", "TokenNaming", "enabled")).to be false
+      expect(config.dig("rules", "UndefinedSymbol")).to be_nil
+    end
+
+    it "rejects unknown profiles" do
+      expect { described_class.profile_config("unknown") }.to raise_error(Collie::Error, /Unknown config profile/)
+    end
+  end
+
+  describe ".schema" do
+    it "describes formatter and rule severity configuration" do
+      schema = described_class.schema
+
+      expect(schema["properties"]["formatter"]["properties"]["indent_size"]["type"]).to eq("integer")
+      expect(schema["$defs"]["severity"]["enum"]).to include("error", "warning", "convention", "info")
+    end
+  end
+
   describe "#rule_enabled?" do
     it "returns true for enabled rules" do
       config = described_class.default

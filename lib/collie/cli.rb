@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 require "thor"
+require "json"
+require_relative "config"
 require_relative "formatter/signature"
 
 module Collie
@@ -154,12 +156,26 @@ module Collie
       end
     end
 
-    desc "init", "Generate default .collie.yml"
-    def init
-      return if File.exist?(".collie.yml") && !yes?(".collie.yml already exists. Overwrite? (y/n)")
+    map "config-schema" => :config_schema
 
-      Config.generate_default
-      say "Generated .collie.yml", :green
+    desc "init", "Generate .collie.yml"
+    option :profile, type: :string, default: "default", enum: Config::PROFILE_NAMES,
+                     desc: "Configuration profile"
+    option :path, type: :string, default: ".collie.yml", desc: "Path to write"
+    def init
+      path = options[:path]
+      return if File.exist?(path) && !yes?("#{path} already exists. Overwrite? (y/n)")
+
+      Config.generate_default(path, profile: options[:profile])
+      say "Generated #{path}", :green
+    rescue Error => e
+      say e.message, :red
+      exit 1
+    end
+
+    desc "config-schema", "Print JSON Schema for .collie.yml"
+    def config_schema
+      puts JSON.pretty_generate(Config.schema)
     end
 
     desc "version", "Show version"

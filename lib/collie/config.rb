@@ -18,6 +18,62 @@ module Collie
       "exclude" => ["vendor/**/*", "tmp/**/*"]
     }.freeze
 
+    PROFILE_OVERRIDES = {
+      "default" => {},
+      "lrama" => {
+        "rules" => {
+          "LeftRecursion" => { "enabled" => false },
+          "FactorizableRules" => { "enabled" => false },
+          "RightRecursion" => { "severity" => "warning" }
+        }
+      },
+      "bison" => {
+        "rules" => {
+          "LeftRecursion" => { "enabled" => false },
+          "FactorizableRules" => { "enabled" => false },
+          "RightRecursion" => { "severity" => "warning" }
+        }
+      },
+      "strict" => {
+        "formatter" => {
+          "max_line_length" => 100
+        },
+        "rules" => {
+          "AmbiguousPrecedence" => { "severity" => "warning" },
+          "ConsistentTagNaming" => { "severity" => "warning" },
+          "EmptyAction" => { "severity" => "warning" },
+          "FactorizableRules" => { "severity" => "warning" },
+          "LongRule" => { "severity" => "warning" },
+          "NonterminalNaming" => { "severity" => "warning" },
+          "PrecImprovement" => { "severity" => "warning" },
+          "RedundantEpsilon" => { "severity" => "warning" },
+          "TokenNaming" => { "severity" => "warning" },
+          "TrailingWhitespace" => { "severity" => "warning" }
+        }
+      },
+      "minimal" => {
+        "rules" => {
+          "AmbiguousPrecedence" => { "enabled" => false },
+          "ConsistentTagNaming" => { "enabled" => false },
+          "EmptyAction" => { "enabled" => false },
+          "FactorizableRules" => { "enabled" => false },
+          "LeftRecursion" => { "enabled" => false },
+          "LongRule" => { "enabled" => false },
+          "NonterminalNaming" => { "enabled" => false },
+          "PrecImprovement" => { "enabled" => false },
+          "RedundantEpsilon" => { "enabled" => false },
+          "RightRecursion" => { "enabled" => false },
+          "TokenNaming" => { "enabled" => false },
+          "TrailingWhitespace" => { "enabled" => false },
+          "UnreachableRule" => { "enabled" => false },
+          "UnusedNonterminal" => { "enabled" => false },
+          "UnusedToken" => { "enabled" => false }
+        }
+      }
+    }.freeze
+
+    PROFILE_NAMES = PROFILE_OVERRIDES.keys.freeze
+
     attr_reader :config
 
     def initialize(config_path = nil)
@@ -51,8 +107,29 @@ module Collie
       new
     end
 
-    def self.generate_default(path = ".collie.yml")
-      File.write(path, DEFAULT_CONFIG.to_yaml)
+    def self.generate_default(path = ".collie.yml", profile: "default")
+      File.write(path, profile_config(profile).to_yaml)
+    end
+
+    def self.profile_config(profile)
+      profile_name = profile.to_s
+      raise Error, "Unknown config profile: #{profile}" unless PROFILE_OVERRIDES.key?(profile_name)
+
+      deep_merge(DEFAULT_CONFIG, PROFILE_OVERRIDES.fetch(profile_name))
+    end
+
+    def self.schema
+      Schema.to_h
+    end
+
+    def self.deep_merge(hash1, hash2)
+      hash1.merge(hash2) do |_key, old_val, new_val|
+        if old_val.is_a?(Hash) && new_val.is_a?(Hash)
+          deep_merge(old_val, new_val)
+        else
+          new_val
+        end
+      end
     end
 
     private
@@ -90,13 +167,9 @@ module Collie
     end
 
     def deep_merge(hash1, hash2)
-      hash1.merge(hash2) do |_key, old_val, new_val|
-        if old_val.is_a?(Hash) && new_val.is_a?(Hash)
-          deep_merge(old_val, new_val)
-        else
-          new_val
-        end
-      end
+      self.class.deep_merge(hash1, hash2)
     end
   end
 end
+
+require_relative "config/schema"

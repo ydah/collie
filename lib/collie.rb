@@ -1,8 +1,9 @@
 # frozen_string_literal: true
 
 require_relative "collie/version"
-require_relative "collie/cli"
 require_relative "collie/config"
+require_relative "collie/config/schema"
+require_relative "collie/cli"
 require_relative "collie/ast"
 require_relative "collie/parser/lexer"
 require_relative "collie/parser/parser"
