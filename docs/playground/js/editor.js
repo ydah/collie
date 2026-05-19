@@ -5,8 +5,8 @@ class EditorManager {
     this.editor = null;
   }
 
-  async initialize(containerId) {
-    return new Promise((resolve) => {
+  async initialize(containerId, initialValue) {
+    return new Promise((resolve, reject) => {
       require.config({
         paths: {
           vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs'
@@ -69,7 +69,7 @@ class EditorManager {
 
         // Create editor
         this.editor = monaco.editor.create(document.getElementById(containerId), {
-          value: '// Type your grammar here or load an example\n',
+          value: initialValue || '// Type your grammar here or load an example\n',
           language: 'yacc',
           theme: 'vs',
           automaticLayout: true,
@@ -78,11 +78,12 @@ class EditorManager {
           lineNumbers: 'on',
           scrollBeyondLastLine: false,
           wordWrap: 'on',
-          tabSize: 4
+          tabSize: 4,
+          renderLineHighlight: 'all'
         });
 
         resolve(this.editor);
-      });
+      }, reject);
     });
   }
 
@@ -96,14 +97,20 @@ class EditorManager {
 
   setMarkers(diagnostics) {
     const model = this.editor.getModel();
-    const markers = diagnostics.map(diag => ({
-      severity: this.severityToMonaco(diag.severity),
-      startLineNumber: diag.location.line,
-      startColumn: diag.location.column,
-      endLineNumber: diag.location.line,
-      endColumn: diag.location.column + 10,
-      message: `[${diag.rule_name}] ${diag.message}`
-    }));
+    const markers = diagnostics.map(diag => {
+      const line = Number(diag.location?.line || 1);
+      const column = Number(diag.location?.column || 1);
+      const length = Math.max(Number(diag.location?.length || 1), 1);
+
+      return {
+        severity: this.severityToMonaco(diag.severity),
+        startLineNumber: line,
+        startColumn: column,
+        endLineNumber: line,
+        endColumn: column + length,
+        message: `[${diag.rule_name}] ${diag.message}`
+      };
+    });
 
     monaco.editor.setModelMarkers(model, 'collie', markers);
   }
@@ -125,5 +132,19 @@ class EditorManager {
   clearMarkers() {
     const model = this.editor.getModel();
     monaco.editor.setModelMarkers(model, 'collie', []);
+  }
+
+  reveal(line, column) {
+    if (!line || !column) {
+      return;
+    }
+
+    this.editor.revealPositionInCenter({ lineNumber: line, column });
+    this.editor.setPosition({ lineNumber: line, column });
+    this.editor.focus();
+  }
+
+  onDidChangeContent(callback) {
+    this.editor.onDidChangeModelContent(callback);
   }
 }

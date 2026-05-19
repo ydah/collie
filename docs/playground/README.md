@@ -5,9 +5,12 @@ An interactive web-based playground for trying out Collie, the linter and format
 ## Features
 
 - Interactive Monaco Editor (same as VS Code)
-- Real-time linting with all 18 built-in rules
+- Real-time linting with all built-in rules
 - Grammar formatting
 - Auto-fix functionality
+- Diagnostic markers that jump to the relevant editor location
+- Copy/apply formatted output and share source via URL
+- Source persistence in local storage
 - Yacc/Bison/Lrama syntax highlighting
 - Pre-loaded example grammar files
 - Runs completely in the browser using Ruby.wasm
@@ -23,6 +26,7 @@ Browser
 ├── Monaco Editor (UI)
 ├── Ruby.wasm (Ruby runtime)
 ├── collie-bundle.rb (All Collie code)
+├── Collie::Playground (Ruby API used by JavaScript)
 └── JavaScript bridge (UI ↔ Ruby)
 ```
 
@@ -62,6 +66,12 @@ Whenever Collie's code changes, rebuild the bundle:
 ruby build-collie-bundle.rb
 ```
 
+Run the bundle smoke test after rebuilding:
+
+```bash
+ruby smoke-test.rb
+```
+
 ## Deployment
 
 The playground is automatically deployed to GitHub Pages via GitHub Actions when changes are pushed to the main branch.
@@ -74,7 +84,8 @@ The workflow:
 1. Checks out the repository
 2. Sets up Ruby
 3. Builds the Collie bundle
-4. Deploys to GitHub Pages
+4. Smoke tests the generated bundle
+5. Deploys to GitHub Pages
 
 ### Accessing the Deployed Playground
 
@@ -94,6 +105,7 @@ https://ydah.github.io/collie/playground/
 - `js/examples.js` - Example grammar files
 - `collie-bundle.rb` - Bundled Collie code (generated)
 - `build-collie-bundle.rb` - Bundle generation script
+- `smoke-test.rb` - Smoke test for the generated bundle
 
 ## Limitations
 

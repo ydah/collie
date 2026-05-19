@@ -25,6 +25,8 @@ module Collie
 
         # Auto-load all rules from rules/ directory
         def load_rules
+          return unless __dir__
+
           rules_path = File.join(__dir__, "rules", "*.rb")
           Dir[rules_path].each { |f| require f }
         end

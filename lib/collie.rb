@@ -55,3 +55,5 @@ module Collie
     end
   end
 end
+
+require_relative "collie/playground"

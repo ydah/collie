@@ -11,13 +11,16 @@ files = [
   "collie/ast.rb",
   "collie/parser/lexer.rb",
   "collie/parser/parser.rb",
+  "collie/parser/debug_serializer.rb",
   "collie/analyzer/symbol_table.rb",
+  "collie/analyzer/symbol_resolver.rb",
   "collie/analyzer/reachability.rb",
   "collie/analyzer/recursion.rb",
   "collie/analyzer/conflict.rb",
   "collie/linter/base.rb",
   "collie/linter/registry.rb",
   "collie/linter/rules/duplicate_token.rb",
+  "collie/linter/rules/symbol_conflict.rb",
   "collie/linter/rules/undefined_symbol.rb",
   "collie/linter/rules/unreachable_rule.rb",
   "collie/linter/rules/circular_reference.rb",
@@ -36,13 +39,17 @@ files = [
   "collie/linter/rules/factorizable_rules.rb",
   "collie/linter/rules/redundant_epsilon.rb",
   "collie/linter/rules/prec_improvement.rb",
+  "collie/formatter/signature.rb",
   "collie/formatter/options.rb",
   "collie/formatter/formatter.rb",
+  "collie/config/schema.rb",
   "collie/reporter/text.rb",
   "collie/reporter/json.rb",
   "collie/reporter/github.rb",
+  "collie/reporter/sarif.rb",
   "collie/config.rb",
-  "collie.rb"
+  "collie.rb",
+  "collie/playground.rb"
 ]
 
 output = []
@@ -56,8 +63,7 @@ output << ""
 files.each do |file_path|
   full_path = LIB_DIR / file_path
   unless full_path.exist?
-    warn "Warning: #{file_path} not found, skipping"
-    next
+    abort "Error: #{file_path} not found"
   end
 
   output << "# === #{file_path} ==="

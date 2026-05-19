@@ -23,6 +23,8 @@ jobs:
           bundler-cache: true
       - name: Build Collie bundle for playground
         run: ruby docs/playground/build-collie-bundle.rb
+      - name: Smoke test playground bundle
+        run: ruby docs/playground/smoke-test.rb
       - name: Setup Pages
         uses: actions/configure-pages@v4
       - name: Upload artifact

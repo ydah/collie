@@ -56,7 +56,12 @@ class RubyRunner {
 
   async loadCollieBundle() {
     try {
-      const response = await fetch(`collie-bundle.rb?v=${Date.now()}`);
+      const version = window.COLLIE_PLAYGROUND_VERSION || 'dev';
+      const response = await fetch(`collie-bundle.rb?v=${encodeURIComponent(version)}`);
+      if (!response.ok) {
+        throw new Error(`Collie bundle request failed: ${response.status}`);
+      }
+
       const code = await response.text();
       await this.eval(code);
     } catch (error) {

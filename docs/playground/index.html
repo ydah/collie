@@ -40,12 +40,14 @@
         <!-- Toolbar -->
         <div class="toolbar">
           <div class="toolbar-left">
+            <label for="example-select" class="sr-only">Load example</label>
             <select id="example-select" class="select">
               <option value="">Load Example...</option>
               <option value="simple">Simple Calculator</option>
               <option value="lrama">Lrama Features</option>
               <option value="invalid">Invalid Grammar (Demo)</option>
             </select>
+            <span id="operation-status" class="status" aria-live="polite">Loading...</span>
           </div>
           <div class="toolbar-right">
             <button id="lint-btn" class="btn btn-primary">
@@ -59,6 +61,9 @@
             </button>
             <button id="clear-btn" class="btn btn-secondary">
               Clear
+            </button>
+            <button id="share-btn" class="btn btn-secondary">
+              Share
             </button>
           </div>
         </div>
@@ -78,14 +83,14 @@
           <div class="panel panel-output">
             <div class="panel-header">
               <h2>Output</h2>
-              <div class="output-tabs">
-                <button class="tab-btn active" data-tab="diagnostics">
+              <div class="output-tabs" role="tablist" aria-label="Output views">
+                <button class="tab-btn active" data-tab="diagnostics" role="tab" aria-selected="true">
                   Diagnostics
                 </button>
-                <button class="tab-btn" data-tab="formatted">
+                <button class="tab-btn" data-tab="formatted" role="tab" aria-selected="false">
                   Formatted
                 </button>
-                <button class="tab-btn" data-tab="rules">
+                <button class="tab-btn" data-tab="rules" role="tab" aria-selected="false">
                   Rules
                 </button>
               </div>
@@ -102,7 +107,15 @@
 
             <!-- Formatted Tab -->
             <div id="tab-formatted" class="tab-content">
-              <pre id="formatted-output" class="output-content"><div class="placeholder">Click "Format" to see formatted output</div></pre>
+              <div class="formatted-toolbar">
+                <button id="apply-format-btn" class="btn btn-secondary" type="button" disabled>
+                  Apply to Editor
+                </button>
+                <button id="copy-format-btn" class="btn btn-secondary" type="button" disabled>
+                  Copy
+                </button>
+              </div>
+              <pre id="formatted-output" class="output-content"><span class="placeholder">Click "Format" to see formatted output</span></pre>
             </div>
 
             <!-- Rules Tab -->
@@ -121,7 +134,7 @@
           <h3>About Collie</h3>
           <p>
             Collie is a linter and formatter for Lrama Style BNF grammar files.
-            It provides 18+ built-in lint rules to catch errors, enforce conventions,
+            It provides built-in lint rules to catch errors, enforce conventions,
             and suggest optimizations.
           </p>
           <p>
@@ -135,6 +148,9 @@
   </div>
 
   <!-- Scripts -->
+  <script>
+    window.COLLIE_PLAYGROUND_VERSION = '4';
+  </script>
   <script src="https://cdn.jsdelivr.net/npm/@ruby/3.3-wasm-wasi@2.6.2/dist/browser.script.iife.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs/loader.min.js"></script>
   <script src="js/examples.js?v=3"></script>
